@@ -1,9 +1,19 @@
 import { useLocalSearchParams, useRouter } from "expo-router";
 import { StyleSheet, Text, TouchableOpacity, View } from "react-native";
 
+/* const getUsers = async () => {
+    const { data, error } = await supabase.from('auth.users').select('*')
+
+    if(error) return []
+    return data;
+} */
+
 export default function HouseScreen() {
   const { houseName } = useLocalSearchParams();
   const router = useRouter();
+
+/*   const users = getUsers();
+  console.log(users) */
 
   return (
     <View style={styles.container}>
@@ -16,23 +26,25 @@ export default function HouseScreen() {
 }
 
 const styles = StyleSheet.create({
-  container: {
-    flex: 1,
-    justifyContent: 'center',
-    alignItems: 'center',
+  container:{
     backgroundColor: 'rgb(255, 249, 230)',
+    height: '100%',
+    width: '100%',
+    padding: 20,
   },
   houseName: {
     fontSize: 32,
     fontWeight: 'bold',
     color: '#4A154B',
     marginBottom: 40,
+    marginTop: 60
   },
   backButton: {
     backgroundColor: '#4A154B',
     paddingVertical: 12,
     paddingHorizontal: 24,
     borderRadius: 8,
+    marginTop: 'auto'
   },
   backButtonText: {
     color: '#FFF',

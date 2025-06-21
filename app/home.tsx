@@ -141,15 +141,17 @@ export const Houses = () => {
         if (validated) {
             setShowPasswordModal(false);
 
-            const { data: neighborExists, error: neighborError } = await supabase.from('neighbors').select("*").eq('slack_id', user?.id).single()
+            console.log(user?.id)
 
-            if(neighborExists === null) {
+            const { data: neighborExists, error: neighborError } = await supabase.from('neighbors').select("*").eq('slack_id', user?.id)
+
+            if(neighborExists?.length === 0) {
                 const neighbor = {
                     house: selectedHouseName,
                     slack_id: user?.id
-                }
+                };
 
-                const { error: insertError } = await supabase.from('neighbors').insert(neighbor)
+                const { error: insertError } = await supabase.from('neighbors').insert(neighbor);
             }
 
             router.replace({
@@ -231,6 +233,7 @@ export const Houses = () => {
                                 passwordError ? styles.inputError : null
                             ]}
                             placeholder="Password"
+                            placeholderTextColor="#222"
                             value={password}
                             onChangeText={setPassword}
                             secureTextEntry
@@ -348,6 +351,7 @@ const styles = StyleSheet.create({
         padding: 10,
         fontSize: 16,
         marginBottom: 10,
+        color: 'red'
     },
     inputError: {
         borderColor: 'red',

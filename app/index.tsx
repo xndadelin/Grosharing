@@ -1,12 +1,11 @@
-import { Houses } from "@/components/Houses";
 import { getUser } from "@/lib/queries";
 import { supabase } from "@/lib/supabase";
 import { ResizeMode, Video } from "expo-av";
 import * as WebBrowser from 'expo-web-browser';
 import { useEffect, useState } from "react";
 import { Alert, Image, StyleSheet, Text, TouchableOpacity, View } from "react-native";
+import { Houses } from "./home";
 
-// Import User type from supabase
 import type { User } from "@supabase/supabase-js";
 
 export default function Index() {

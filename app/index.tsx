@@ -3,9 +3,30 @@ import { getUser } from "@/lib/queries";
 import { supabase } from "@/lib/supabase";
 import { ResizeMode, Video } from "expo-av";
 import * as WebBrowser from 'expo-web-browser';
+import { useEffect, useState } from "react";
 import { Alert, Image, StyleSheet, Text, TouchableOpacity, View } from "react-native";
 
-export default async function Index() {
+// Import User type from supabase
+import type { User } from "@supabase/supabase-js";
+
+export default function Index() {
+  const [user, setUser] = useState<User | null>(null)
+  const [loading, setLoading] = useState(true)
+  
+  useEffect(() => {
+    const loadUser = async () => {
+      try {
+        const userData = await getUser()
+        setUser(userData)
+      } catch (error) {
+        console.error("Error loading user:", error)
+      } finally {
+        setLoading(false)
+      }
+    }
+    
+    loadUser()
+  }, [])
 
   const onHandleSlackPress = async () => {
     try {
@@ -67,7 +88,13 @@ export default async function Index() {
     }
   }
 
-  const user = await getUser()
+  if(loading) {
+    return (
+      <View style={{flex: 1, justifyContent: 'center', alignItems: 'center'}}>
+        <Text>Loading...</Text>
+      </View>
+    )
+  }
 
   if(user) return <Houses />
 

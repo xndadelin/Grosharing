@@ -1,19 +1,26 @@
+import { supabase } from "@/lib/supabase";
 import { useLocalSearchParams, useRouter } from "expo-router";
+import { useEffect, useState } from "react";
 import { StyleSheet, Text, TouchableOpacity, View } from "react-native";
 
-/* const getUsers = async () => {
-    const { data, error } = await supabase.from('auth.users').select('*')
-
+const getUsers = async () => {
+    const { data, error } = await supabase.from('neighbors').select('*')
     if(error) return []
     return data;
-} */
+} 
 
 export default function HouseScreen() {
   const { houseName } = useLocalSearchParams();
   const router = useRouter();
+  const [users, setUsers] = useState<any[]>([]);
 
-/*   const users = getUsers();
-  console.log(users) */
+  useEffect(() => {
+    const fetchUsers = async () => {
+      const usersData = await getUsers();
+      setUsers(usersData);
+    };
+    fetchUsers();
+  }, []);
 
   return (
     <View style={styles.container}>

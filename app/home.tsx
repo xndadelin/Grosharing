@@ -1,9 +1,10 @@
+import { Avatar } from "@/components/Avatar"
 import { getUser } from "@/lib/queries"
 import { supabase } from "@/lib/supabase"
 import type { User } from "@supabase/supabase-js"
 import { useRouter } from "expo-router"
 import { useEffect, useState } from "react"
-import { Alert, Modal, ScrollView, StyleSheet, Text, TextInput, TouchableOpacity, View } from "react-native"
+import { Modal, ScrollView, StyleSheet, Text, TextInput, TouchableOpacity, View } from "react-native"
 import { HouseCard } from "../components/HouseCard"
 
 export const Houses = () => {
@@ -52,26 +53,6 @@ export const Houses = () => {
         loadUser()
     }, [])
 
-    const handleLogout = async () => {
-        Alert.alert(
-            "Logout",
-            "Are you sure you want to logout?",
-            [
-                {
-                    text: "Cancel",
-                    style: "cancel"
-                },
-                {
-                    text: "Yes, logout",
-                    onPress: async () => {
-                        await supabase.auth.signOut();
-                        router.replace("/");
-                    }
-                }
-            ]
-        );
-    };
-
     if (loading) {
         return (
             <View style={{ flex: 1, justifyContent: 'center', alignItems: 'center', backgroundColor: 'rgb(255, 249, 230)' }}>
@@ -79,32 +60,7 @@ export const Houses = () => {
             </View>
         )
     }
-
-    if (showResult) {
-        return (
-            <View style={styles.resultContainer}>
-                <TouchableOpacity
-                    style={styles.logoutButton}
-                    onPress={handleLogout}
-                >
-                    <Text style={styles.logoutButtonText}>Logout</Text>
-                </TouchableOpacity>
-
-                <Text style={styles.resultText}>{selectedHouseName}</Text>
-
-                <TouchableOpacity
-                    style={styles.backButton}
-                    onPress={() => {
-                        setShowResult(false);
-                        setSelectedHouse(null);
-                    }}
-                >
-                    <Text style={styles.backButtonText}>Back!</Text>
-                </TouchableOpacity>
-            </View>
-        );
-    }
-
+    
     const checkPassword = async () => {
         try {
             const { data, error } = await supabase
@@ -141,14 +97,14 @@ export const Houses = () => {
         if (validated) {
             setShowPasswordModal(false);
 
-            console.log(user?.id)
-
             const { data: neighborExists, error: neighborError } = await supabase.from('neighbors').select("*").eq('slack_id', user?.id)
 
             if(neighborExists?.length === 0) {
                 const neighbor = {
                     house: selectedHouseName,
-                    slack_id: user?.id
+                    slack_id: user?.id,
+                    avatar_url: user?.user_metadata?.avatar_url,
+                    full_name: user?.user_metadata?.full_name || user?.user_metadata?.name
                 };
 
                 const { error: insertError } = await supabase.from('neighbors').insert(neighbor);
@@ -175,12 +131,7 @@ export const Houses = () => {
                     </Text>
                 </View>
 
-                <TouchableOpacity
-                    style={styles.logoutButton}
-                    onPress={handleLogout}
-                >
-                    <Text style={styles.logoutButtonText}>Logout</Text>
-                </TouchableOpacity>
+                <Avatar avatar_url={user?.user_metadata?.avatar_url} />
             </View>
 
             <ScrollView contentContainerStyle={{ alignItems: 'center', paddingBottom: 20 }}>
@@ -233,7 +184,7 @@ export const Houses = () => {
                                 passwordError ? styles.inputError : null
                             ]}
                             placeholder="Password"
-                            placeholderTextColor="#222"
+                            placeholderTextColor="#000"
                             value={password}
                             onChangeText={setPassword}
                             secureTextEntry
@@ -351,7 +302,7 @@ const styles = StyleSheet.create({
         padding: 10,
         fontSize: 16,
         marginBottom: 10,
-        color: 'red'
+        color: 'black'
     },
     inputError: {
         borderColor: 'red',

@@ -1,8 +1,9 @@
 import { getUser } from "@/lib/queries"
 import { supabase } from "@/lib/supabase"
 import type { User } from "@supabase/supabase-js"
+import { useRouter } from "expo-router"
 import { useEffect, useState } from "react"
-import { Modal, ScrollView, StyleSheet, Text, TextInput, TouchableOpacity, View } from "react-native"
+import { Alert, Modal, ScrollView, StyleSheet, Text, TextInput, TouchableOpacity, View } from "react-native"
 import { HouseCard } from "../components/HouseCard"
 
 export const Houses = () => {
@@ -14,28 +15,28 @@ export const Houses = () => {
     const [passwordError, setPasswordError] = useState("")
     const [showResult, setShowResult] = useState(false)
     const [selectedHouseName, setSelectedHouseName] = useState("")
+    const router = useRouter()
 
     const houses = [
         {
             id: "atelier",
             name: "Atelier",
             location: "Lower Haight",
-            imageUrl: "https://v5.airtableusercontent.com/v3/u/42/42/1750478400000/9HBv6z2PIWM-s5rIUTf1YQ/QgtkT84H91Jj9wQ2GrvqcnQ4B7EaytrSvRa7stDrUlEZmmvNIkZaKuhSLaGnHthlutEMGEZ9l10ZxZ8m02ZUp3lqbAmgKSg9sr3vcuI5zq2rhoofwvrk8wkC4qX73ykFjAdT9rvUIIE2FJ_EqU9RmSE6u6Ub23xZpYlqidq4WbE/sk1vn6NDA3IO-gl3DnOlcYqvWKJwPT4rEgGXJR5jmPU"
+            imageUrl: require("../assets/images/LowerHaight.png")
         },
         {
             id: "casa",
             name: "Casa",
             location: "Mission",
-            imageUrl: "https://v5.airtableusercontent.com/v3/u/42/42/1750478400000/vIBRmybJKYxKiVmpwXxMyw/oGwMfIV_SZ2xy-ZwYOjrVHoLmPHKZELhy0HZ156026d99ZI-0a5VwJEl_Ee3LGBe8xm6qsYn4OKs8hf5AFsmePKnRHd5hK9jd4YWX5QMdYLwuwb40BQMgHNTBZMzJDsK5b9bfkyyLuzu_7J-kp5paClLqi3UsTAPaPcnQMPBJWw/FgEqEmUgxXdUJx3EoPmKiF0D9W1GWj4pg_iZ_rf4W1c"
+            imageUrl: require("../assets/images/Mission.png")
         },
         {
             id: "jia",
             name: "Jiā",
             location: "Sunset",
-            imageUrl: "https://v5.airtableusercontent.com/v3/u/42/42/1750478400000/QokyACE0jj3JU6qRa_7gAw/i4yunbqs6LAHpBEc1kuGTIvj9_XTfFUWws3aLCmK-rzVPrhE9AJiKhFBqznpX_5blfjh2ver3QzYFxrYWb4HO2iJkbuh_XXzEh64mN5NbUMjVsqF8n3WCBpNRRIYY09minmFv98hGo6976NkSGGr6kpDnP_CFeiv64lroPegcSA/EY5y2YJAbZNDUqUDTP89LpoAhMwLPlw9Ct1uMk2sXvo"
+            imageUrl: require("../assets/images/Sunset.png")
         }
     ];
-
     useEffect(() => {
         const loadUser = async () => {
             try {
@@ -51,6 +52,26 @@ export const Houses = () => {
         loadUser()
     }, [])
 
+    const handleLogout = async () => {
+        Alert.alert(
+            "Logout",
+            "Are you sure you want to logout?",
+            [
+                {
+                    text: "Cancel",
+                    style: "cancel"
+                },
+                {
+                    text: "Yes, logout",
+                    onPress: async () => {
+                        await supabase.auth.signOut();
+                        router.replace("/");
+                    }
+                }
+            ]
+        );
+    };
+
     if (loading) {
         return (
             <View style={{ flex: 1, justifyContent: 'center', alignItems: 'center', backgroundColor: 'rgb(255, 249, 230)' }}>
@@ -62,6 +83,13 @@ export const Houses = () => {
     if (showResult) {
         return (
             <View style={styles.resultContainer}>
+                <TouchableOpacity
+                    style={styles.logoutButton}
+                    onPress={handleLogout}
+                >
+                    <Text style={styles.logoutButtonText}>Logout</Text>
+                </TouchableOpacity>
+
                 <Text style={styles.resultText}>{selectedHouseName}</Text>
 
                 <TouchableOpacity
@@ -82,11 +110,9 @@ export const Houses = () => {
             const { data, error } = await supabase
                 .from('password_houses')
                 .select("*")
-                .eq("house", selectedHouse)  
+                .eq("house", selectedHouse)
                 .eq("password", password)
                 .maybeSingle();
-
-            console.log(selectedHouse, password, data, error)
 
             return !error && data !== null;
         } catch (error) {
@@ -114,7 +140,22 @@ export const Houses = () => {
         const validated = await checkPassword()
         if (validated) {
             setShowPasswordModal(false);
-            setShowResult(true);
+
+            const { data: neighborExists, error: neighborError } = await supabase.from('neighbors').select("*").eq('slack_id', user?.id).single()
+
+            if(neighborExists === null) {
+                const neighbor = {
+                    house: selectedHouseName,
+                    slack_id: user?.id
+                }
+
+                const { error: insertError } = await supabase.from('neighbors').insert(neighbor)
+            }
+
+            router.replace({
+                pathname: "/houseScreen",
+                params: { houseName: selectedHouseName }
+            });
         } else {
             setPasswordError("Incorrect password. Please try again.");
         }
@@ -122,16 +163,23 @@ export const Houses = () => {
 
     return (
         <View style={{ height: '100%', width: '100%', backgroundColor: 'rgb(255, 249, 230)' }}>
-            <Text
-                style={{ marginTop: 60, marginLeft: 20, fontSize: 30, fontWeight: 'bold' }}
-            >
-                Hello, {user?.user_metadata?.name || user?.user_metadata?.full_name || 'User'}
-            </Text>
-            <Text
-                style={{ marginLeft: 20, color: '#666666', fontSize: 16, marginTop: 5, marginBottom: 20, fontStyle: 'italic' }}
-            >
-                Select your neighborhood house
-            </Text>
+            <View style={styles.header}>
+                <View>
+                    <Text style={styles.headerText}>
+                        Hello, {user?.user_metadata?.name || user?.user_metadata?.full_name || 'User'}
+                    </Text>
+                    <Text style={styles.subHeaderText}>
+                        Select your neighborhood house
+                    </Text>
+                </View>
+
+                <TouchableOpacity
+                    style={styles.logoutButton}
+                    onPress={handleLogout}
+                >
+                    <Text style={styles.logoutButtonText}>Logout</Text>
+                </TouchableOpacity>
+            </View>
 
             <ScrollView contentContainerStyle={{ alignItems: 'center', paddingBottom: 20 }}>
                 {houses.map(house => (
@@ -166,6 +214,7 @@ export const Houses = () => {
                 )}
             </ScrollView>
 
+            {/* Password Modal */}
             <Modal
                 visible={showPasswordModal}
                 transparent={true}
@@ -202,7 +251,7 @@ export const Houses = () => {
 
                             <TouchableOpacity
                                 style={styles.confirmButton}
-                                onPress={() => { validatePassword(); checkPassword(); }}
+                                onPress={validatePassword}
                             >
                                 <Text style={styles.confirmButtonText}>Confirm</Text>
                             </TouchableOpacity>
@@ -215,6 +264,24 @@ export const Houses = () => {
 }
 
 const styles = StyleSheet.create({
+    header: {
+        flexDirection: 'row',
+        justifyContent: 'space-between',
+        alignItems: 'center',
+        paddingHorizontal: 20,
+        marginTop: 60,
+        marginBottom: 20,
+    },
+    headerText: {
+        fontSize: 30,
+        fontWeight: 'bold'
+    },
+    subHeaderText: {
+        color: '#666666',
+        fontSize: 16,
+        marginTop: 5,
+        fontStyle: 'italic'
+    },
     resultContainer: {
         flex: 1,
         justifyContent: 'center',
@@ -237,6 +304,18 @@ const styles = StyleSheet.create({
         color: '#FFF',
         fontWeight: 'bold',
         textAlign: 'center',
+    },
+    logoutButton: {
+        paddingVertical: 8,
+        paddingHorizontal: 15,
+        backgroundColor: 'rgba(255, 255, 255, 0.3)',
+        borderRadius: 5,
+        borderWidth: 1,
+        borderColor: '#4A154B',
+    },
+    logoutButtonText: {
+        color: '#4A154B',
+        fontWeight: 'bold',
     },
     modalOverlay: {
         flex: 1,

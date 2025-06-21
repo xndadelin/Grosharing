@@ -69,6 +69,7 @@ export default function Index() {
             if (sessionError) {
               Alert.alert('Session failed!', 'Could not establish session: ' + sessionError.message);
             } else if (sessionData?.user) {
+              setUser(sessionData.user);
 
               Alert.alert('Success!', `Welcome to Neighborhood!`);
             }
@@ -100,7 +101,7 @@ export default function Index() {
   return (
     <View style={styles.container}>
       <Video
-        source={{ uri: "https://hc-cdn.hel1.your-objectstorage.com/s/v3/3838e7c0f3d7d5bcc703ca27234178b047a94160_background.mp4" }}
+        source={require("../assets/videos/video.mp4")}
         style={{ width: "100%", height: "100%" }}
         isMuted={true}
         shouldPlay={true}
@@ -108,12 +109,15 @@ export default function Index() {
         resizeMode={ResizeMode.COVER}
         rate={1.0}
       />
+      <View style={styles.logoContainer}>
+        <Image source={require('../assets/images/neighborhoodLogo.png')} style={styles.logo} resizeMode="contain" />
+      </View>
       <View style={styles.overlay}>
         <TouchableOpacity
           style={styles.slackButton}
           onPress={onHandleSlackPress}
         >
-          <View style={styles.buttonContent}>*
+          <View style={styles.buttonContent}>
             <Image
               source={require('../assets/images/slack.png')}
               style={styles.slackIcon}
@@ -132,6 +136,18 @@ const styles = StyleSheet.create({
   container: {
     flex: 1,
     position: 'relative',
+  },
+  logoContainer: {
+    position: 'absolute',
+    top: '40%',
+    left: 0,
+    right: 0,
+    alignItems: 'center',
+    zIndex: 2,
+  },
+  logo: {
+    width: 240,
+    height: 240,
   },
   overlay: {
     position: 'absolute',

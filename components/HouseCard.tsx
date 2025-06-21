@@ -1,9 +1,9 @@
-import { Image, StyleSheet, Text, TouchableOpacity, View } from "react-native";
+import { Image, ImageSourcePropType, StyleSheet, Text, TouchableOpacity, View } from "react-native";
 
 type HouseCardProps = {
   name: string;
   location: string;
-  imageUrl: string;
+  imageUrl: ImageSourcePropType;
   selected?: boolean;
   onSelect: () => void;
 };
@@ -15,7 +15,7 @@ export const HouseCard = ({ name, location, imageUrl, selected = false, onSelect
       onPress={onSelect}
     >
       <Image
-        source={{ uri: imageUrl }}
+        source={imageUrl}
         style={styles.image}
         resizeMode="cover"
       />

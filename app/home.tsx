@@ -14,7 +14,6 @@ export const Houses = () => {
     const [showPasswordModal, setShowPasswordModal] = useState(false)
     const [password, setPassword] = useState("")
     const [passwordError, setPasswordError] = useState("")
-    const [showResult, setShowResult] = useState(false)
     const [selectedHouseName, setSelectedHouseName] = useState("")
     const router = useRouter()
 
@@ -69,7 +68,7 @@ export const Houses = () => {
                 .eq("house", selectedHouse)
                 .eq("password", password)
                 .maybeSingle();
-
+            
             return !error && data !== null;
         } catch (error) {
             console.error("Error checking password:", error);
@@ -97,7 +96,11 @@ export const Houses = () => {
         if (validated) {
             setShowPasswordModal(false);
 
-            const { data: neighborExists, error: neighborError } = await supabase.from('neighbors').select("*").eq('slack_id', user?.id)
+            const { data: neighborExists, error: neighborError } = await supabase
+              .from('neighbors')
+              .select("*")
+              .eq('slack_id', user?.id)
+              .eq('house', selectedHouseName);
 
             if(neighborExists?.length === 0) {
                 const neighbor = {
@@ -124,7 +127,7 @@ export const Houses = () => {
             <View style={styles.header}>
                 <View>
                     <Text style={styles.headerText}>
-                        Hello, {user?.user_metadata?.name || user?.user_metadata?.full_name || 'User'}
+                        Hello, {user?.user_metadata?.name || user?.user_metadata?.full_name}
                     </Text>
                     <Text style={styles.subHeaderText}>
                         Select your neighborhood house
@@ -134,7 +137,10 @@ export const Houses = () => {
                 <Avatar avatar_url={user?.user_metadata?.avatar_url} />
             </View>
 
-            <ScrollView contentContainerStyle={{ alignItems: 'center', paddingBottom: 20 }}>
+            <ScrollView 
+                contentContainerStyle={{ alignItems: 'center', paddingBottom: 40, paddingTop: 10 }}
+                showsVerticalScrollIndicator={false}
+            >
                 {houses.map(house => (
                     <HouseCard
                         key={house.id}
@@ -148,26 +154,16 @@ export const Houses = () => {
 
                 {selectedHouse && (
                     <TouchableOpacity
-                        style={{
-                            backgroundColor: '#4A154B',
-                            paddingHorizontal: 30,
-                            paddingVertical: 15,
-                            borderRadius: 8,
-                            marginTop: 20,
-                            flexDirection: 'row',
-                            alignItems: 'center',
-                            justifyContent: 'center',
-                        }}
+                        style={styles.continueButton}
                         onPress={showPasswordPrompt}
                     >
-                        <Text style={{ color: 'white', fontWeight: 'bold', fontSize: 16 }}>
+                        <Text style={styles.continueButtonText}>
                             Continue
                         </Text>
                     </TouchableOpacity>
                 )}
             </ScrollView>
 
-            {/* Password Modal */}
             <Modal
                 visible={showPasswordModal}
                 transparent={true}
@@ -177,6 +173,7 @@ export const Houses = () => {
                 <View style={styles.modalOverlay}>
                     <View style={styles.modalContent}>
                         <Text style={styles.modalTitle}>Enter house password</Text>
+                        <Text style={styles.modalSubtitle}>Password required to join {selectedHouseName}</Text>
 
                         <TextInput
                             style={[
@@ -184,11 +181,12 @@ export const Houses = () => {
                                 passwordError ? styles.inputError : null
                             ]}
                             placeholder="Password"
-                            placeholderTextColor="#000"
+                            placeholderTextColor="#666"
                             value={password}
                             onChangeText={setPassword}
                             secureTextEntry
                             autoCapitalize="none"
+                            autoFocus
                         />
 
                         {passwordError ? (
@@ -228,7 +226,8 @@ const styles = StyleSheet.create({
     },
     headerText: {
         fontSize: 30,
-        fontWeight: 'bold'
+        fontWeight: 'bold',
+        color: '#333',
     },
     subHeaderText: {
         color: '#666666',
@@ -236,80 +235,73 @@ const styles = StyleSheet.create({
         marginTop: 5,
         fontStyle: 'italic'
     },
-    resultContainer: {
-        flex: 1,
-        justifyContent: 'center',
-        alignItems: 'center',
-        backgroundColor: 'rgb(255, 249, 230)',
-    },
-    resultText: {
-        fontSize: 32,
-        fontWeight: 'bold',
-        color: '#4A154B',
-    },
-    backButton: {
-        marginTop: 20,
-        paddingVertical: 10,
-        paddingHorizontal: 20,
-        borderRadius: 5,
+    continueButton: {
         backgroundColor: '#4A154B',
+        paddingHorizontal: 40,
+        paddingVertical: 16,
+        borderRadius: 6,
+        marginTop: 20,
+        flexDirection: 'row',
+        alignItems: 'center',
+        justifyContent: 'center',
+        shadowColor: '#000',
+        shadowOffset: { width: 0, height: 2 },
+        shadowOpacity: 0.2,
+        shadowRadius: 3,
+        elevation: 4,
     },
-    backButtonText: {
-        color: '#FFF',
+    continueButtonText: {
+        color: 'white',
         fontWeight: 'bold',
-        textAlign: 'center',
-    },
-    logoutButton: {
-        paddingVertical: 8,
-        paddingHorizontal: 15,
-        backgroundColor: 'rgba(255, 255, 255, 0.3)',
-        borderRadius: 5,
-        borderWidth: 1,
-        borderColor: '#4A154B',
-    },
-    logoutButtonText: {
-        color: '#4A154B',
-        fontWeight: 'bold',
+        fontSize: 16,
     },
     modalOverlay: {
         flex: 1,
-        backgroundColor: 'rgba(0,0,0,0.5)',
+        backgroundColor: 'rgba(0,0,0,0.6)',
         justifyContent: 'center',
         alignItems: 'center',
     },
     modalContent: {
-        width: '80%',
+        width: '85%',
         backgroundColor: '#FFF',
-        borderRadius: 10,
-        padding: 20,
+        borderRadius: 8,
+        padding: 24,
         shadowColor: '#000',
-        shadowOffset: { width: 0, height: 2 },
-        shadowOpacity: 0.25,
-        shadowRadius: 3.84,
-        elevation: 5,
+        shadowOffset: { width: 0, height: 4 },
+        shadowOpacity: 0.3,
+        shadowRadius: 6,
+        elevation: 8,
     },
     modalTitle: {
-        fontSize: 20,
+        fontSize: 22,
         fontWeight: 'bold',
-        marginBottom: 15,
+        marginBottom: 6,
         color: '#4A154B',
+        textAlign: 'center',
+    },
+    modalSubtitle: {
+        fontSize: 14,
+        color: '#666',
+        marginBottom: 20,
         textAlign: 'center',
     },
     passwordInput: {
         borderWidth: 1,
         borderColor: '#DDD',
-        borderRadius: 5,
-        padding: 10,
+        borderRadius: 4,
+        padding: 12,
         fontSize: 16,
-        marginBottom: 10,
-        color: 'black'
+        marginBottom: 16,
+        color: 'black',
+        backgroundColor: '#f9f9f9',
     },
     inputError: {
-        borderColor: 'red',
+        borderColor: '#ff3b30',
+        backgroundColor: 'rgba(255, 59, 48, 0.05)',
     },
     errorText: {
-        color: 'red',
-        marginBottom: 10,
+        color: '#ff3b30',
+        marginBottom: 16,
         textAlign: 'center',
     },
     modalButtons: {
@@ -318,15 +310,15 @@ const styles = StyleSheet.create({
         marginTop: 10,
     },
     cancelButton: {
-        paddingVertical: 10,
+        paddingVertical: 12,
         paddingHorizontal: 15,
         borderRadius: 5,
-        backgroundColor: '#EEE',
+        backgroundColor: '#f2f2f2',
         flex: 1,
         marginRight: 10,
     },
     confirmButton: {
-        paddingVertical: 10,
+        paddingVertical: 12,
         paddingHorizontal: 15,
         borderRadius: 5,
         backgroundColor: '#4A154B',

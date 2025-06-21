@@ -2,7 +2,7 @@ import { supabase } from "@/lib/supabase";
 import { Feather } from '@expo/vector-icons';
 import { useRouter } from "expo-router";
 import { useState } from "react";
-import { Alert, Image, StyleSheet, TouchableOpacity, View } from "react-native";
+import { Alert, Image, StyleSheet, Text, TouchableOpacity, View } from "react-native";
 
 type AvatarProps = {
     avatar_url: string;
@@ -10,11 +10,12 @@ type AvatarProps = {
 
 export const Avatar = ({ avatar_url }: AvatarProps) => {
     const [menuVisible, setMenuVisible] = useState(false);
-    const router = useRouter()
+    const router = useRouter();
 
     const handleAvatarPress = () => {
         setMenuVisible(!menuVisible);
     };
+    
     const handleLogout = async () => {
         Alert.alert(
             "Logout",
@@ -29,7 +30,8 @@ export const Avatar = ({ avatar_url }: AvatarProps) => {
                     onPress: async () => {
                         await supabase.auth.signOut();
                         router.replace("/");
-                    }
+                    },
+                    style: "destructive"
                 }
             ]
         );
@@ -37,10 +39,10 @@ export const Avatar = ({ avatar_url }: AvatarProps) => {
 
     return (
         <View style={styles.container}>
-            <TouchableOpacity onPress={handleAvatarPress}>
+            <TouchableOpacity onPress={handleAvatarPress} style={styles.avatarContainer}>
                 <Image
                     source={{
-                        uri: avatar_url || "https://i.pravatar.cc/300",
+                        uri: avatar_url
                     }}
                     style={styles.avatar}
                 />
@@ -50,7 +52,8 @@ export const Avatar = ({ avatar_url }: AvatarProps) => {
                 <View style={styles.menu}>
                     <TouchableOpacity onPress={handleLogout} style={styles.menuItem}>
                         <View style={{ flexDirection: 'row', alignItems: 'center' }}>
-                            <Feather name="log-out" size={12} color="#333" />
+                            <Feather name="log-out" size={18} color="#333" style={{ marginRight: 8 }} />
+                            <Text style={styles.menuText}>Logout</Text>
                         </View>
                     </TouchableOpacity>
                 </View>
@@ -64,33 +67,44 @@ const styles = StyleSheet.create({
         position: "relative",
         alignItems: "flex-end",
     },
+    avatarContainer: {
+        padding: 4,
+    },
     avatar: {
         width: 40,
         height: 40,
         borderRadius: 5,
         borderColor: '#4A154B',
-        borderWidth: 1
+        borderWidth: 1.5,
+        shadowColor: '#000',
+        shadowOffset: { width: 0, height: 1 },
+        shadowOpacity: 0.1,
+        shadowRadius: 2,
+        elevation: 2,
     },
     menu: {
         position: "absolute",
         top: 50,
         right: 0,
         backgroundColor: "#fff",
-        borderRadius: 8,
-        paddingVertical: 8,
-        paddingHorizontal: 12,
+        borderRadius: 6,
+        paddingVertical: 10,
+        paddingHorizontal: 14,
         elevation: 5,
         shadowColor: "#000",
-        shadowOffset: { width: 0, height: 2 },
-        shadowOpacity: 0.15,
-        shadowRadius: 5,
+        shadowOffset: { width: 0, height: 3 },
+        shadowOpacity: 0.2,
+        shadowRadius: 6,
         zIndex: 10,
+        minWidth: 120,
     },
     menuItem: {
-        paddingVertical: 6,
+        paddingVertical: 8,
+        paddingHorizontal: 4,
     },
     menuText: {
-        fontSize: 16,
+        fontSize: 15,
         color: "#333",
+        fontWeight: '500',
     },
 });

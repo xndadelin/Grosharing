@@ -103,7 +103,6 @@ export default function Index() {
       <Video
         source={require("../assets/videos/video.mp4")}
         style={{ width: "100%", height: "100%" }}
-        isMuted={true}
         shouldPlay={true}
         isLooping={true}
         resizeMode={ResizeMode.COVER}
@@ -139,7 +138,7 @@ const styles = StyleSheet.create({
   },
   logoContainer: {
     position: 'absolute',
-    top: '40%',
+    top: '35%',
     left: 0,
     right: 0,
     alignItems: 'center',

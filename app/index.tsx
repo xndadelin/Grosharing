@@ -1,10 +1,11 @@
+import { Houses } from "@/components/Houses";
 import { getUser } from "@/lib/queries";
 import { supabase } from "@/lib/supabase";
 import { ResizeMode, Video } from "expo-av";
 import * as WebBrowser from 'expo-web-browser';
 import { Alert, Image, StyleSheet, Text, TouchableOpacity, View } from "react-native";
 
-export default function Index() {
+export default async function Index() {
 
   const onHandleSlackPress = async () => {
     try {
@@ -44,12 +45,10 @@ export default function Index() {
               access_token: accessToken,
               refresh_token: refreshToken
             })
-            
+
             if (sessionError) {
               Alert.alert('Session failed!', 'Could not establish session: ' + sessionError.message);
             } else if (sessionData?.user) {
-
-              const user = await getUser();
 
               Alert.alert('Success!', `Welcome to Neighborhood!`);
             }
@@ -67,6 +66,10 @@ export default function Index() {
       ])
     }
   }
+
+  const user = await getUser()
+
+  if(user) return <Houses />
 
   return (
     <View style={styles.container}>

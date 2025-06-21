@@ -1,13 +1,78 @@
+import { getUser } from "@/lib/queries";
+import { supabase } from "@/lib/supabase";
 import { ResizeMode, Video } from "expo-av";
-import { Image, StyleSheet, Text, TouchableOpacity, View } from "react-native";
+import * as WebBrowser from 'expo-web-browser';
+import { Alert, Image, StyleSheet, Text, TouchableOpacity, View } from "react-native";
 
 export default function Index() {
+
+  const onHandleSlackPress = async () => {
+    try {
+      await WebBrowser.warmUpAsync();
+
+      const { data, error } = await supabase.auth.signInWithOAuth({
+        provider: "slack_oidc",
+        options: {
+          redirectTo: 'grosharing://',
+          skipBrowserRedirect: false,
+        }
+      });
+
+      if (error) {
+        Alert.alert('Error', 'Authentication failed. Please try again.', [
+          {
+            text: 'OK',
+          }
+        ])
+      } else if (data.url) {
+        const result = await WebBrowser.openAuthSessionAsync(
+          data.url,
+          'grosharing://'
+        );
+
+        if (result.type === 'success' && result.url) {
+          const fragment = result.url.split('#')[1];
+          const params = new URLSearchParams(fragment)
+
+          const accessToken = params.get("access_token")
+          const refreshToken = params.get("refresh_token")
+          const expiresAt = params.get("expires_at")
+          const tokenType = params.get("token_type")
+
+          if (accessToken && refreshToken) {
+            const { data: sessionData, error: sessionError } = await supabase.auth.setSession({
+              access_token: accessToken,
+              refresh_token: refreshToken
+            })
+            
+            if (sessionError) {
+              Alert.alert('Session failed!', 'Could not establish session: ' + sessionError.message);
+            } else if (sessionData?.user) {
+
+              const user = await getUser();
+
+              Alert.alert('Success!', `Welcome to Neighborhood!`);
+            }
+          } else {
+            Alert.alert('Error', 'Missing access or refresh token. Please try again.');
+          }
+        }
+
+      }
+    } catch (e) {
+      Alert.alert('error!', 'authentication error!', [
+        {
+          text: 'Please try again!' + e
+        }
+      ])
+    }
+  }
 
   return (
     <View style={styles.container}>
       <Video
         source={{ uri: "https://hc-cdn.hel1.your-objectstorage.com/s/v3/3838e7c0f3d7d5bcc703ca27234178b047a94160_background.mp4" }}
-        style={{width: "100%", height: "100%"}}
+        style={{ width: "100%", height: "100%" }}
         isMuted={true}
         shouldPlay={true}
         isLooping={true}
@@ -15,14 +80,12 @@ export default function Index() {
         rate={1.0}
       />
       <View style={styles.overlay}>
-        <TouchableOpacity 
+        <TouchableOpacity
           style={styles.slackButton}
-          onPress={() => {
-            console.log("Slack button pressed");
-          }}
+          onPress={onHandleSlackPress}
         >
           <View style={styles.buttonContent}>*
-            <Image 
+            <Image
               source={require('../assets/images/slack.png')}
               style={styles.slackIcon}
             />

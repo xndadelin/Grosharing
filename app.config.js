@@ -27,6 +27,7 @@ export default {
     },
     plugins: [
       "expo-router",
+      "expo-web-browser",
       [
         "expo-splash-screen",
         {
@@ -35,7 +36,7 @@ export default {
           "resizeMode": "contain",
           "backgroundColor": "#ffffff"
         }
-      ]
+      ],
     ],
     experiments: {
       typedRoutes: true

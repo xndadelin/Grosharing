@@ -4,7 +4,7 @@ import { supabase } from "@/lib/supabase"
 import type { User } from "@supabase/supabase-js"
 import { useRouter } from "expo-router"
 import { useEffect, useState } from "react"
-import { Modal, ScrollView, StyleSheet, Text, TextInput, TouchableOpacity, View } from "react-native"
+import { Keyboard, Modal, ScrollView, StyleSheet, Text, TextInput, TouchableOpacity, TouchableWithoutFeedback, View } from "react-native"
 import { HouseCard } from "../components/HouseCard"
 
 export const Houses = () => {
@@ -90,6 +90,10 @@ export const Houses = () => {
         setPasswordError("");
         setShowPasswordModal(true);
     };
+    
+    const dismissKeyboard = () => {
+        Keyboard.dismiss();
+    };
 
     const validatePassword = async () => {
         const validated = await checkPassword()
@@ -138,7 +142,7 @@ export const Houses = () => {
             </View>
 
             <ScrollView 
-                contentContainerStyle={{ alignItems: 'center', paddingBottom: 40, paddingTop: 10 }}
+                contentContainerStyle={{ alignItems: 'center', paddingBottom: 100, paddingTop: 10 }}
                 showsVerticalScrollIndicator={false}
             >
                 {houses.map(house => (
@@ -151,8 +155,10 @@ export const Houses = () => {
                         onSelect={() => handleHouseSelect(house.id)}
                     />
                 ))}
+            </ScrollView>
 
-                {selectedHouse && (
+            {selectedHouse && (
+                <View style={styles.floatingButtonContainer}>
                     <TouchableOpacity
                         style={styles.continueButton}
                         onPress={showPasswordPrompt}
@@ -161,8 +167,8 @@ export const Houses = () => {
                             Continue
                         </Text>
                     </TouchableOpacity>
-                )}
-            </ScrollView>
+                </View>
+            )}
 
             <Modal
                 visible={showPasswordModal}
@@ -170,46 +176,52 @@ export const Houses = () => {
                 animationType="fade"
                 onRequestClose={() => setShowPasswordModal(false)}
             >
-                <View style={styles.modalOverlay}>
-                    <View style={styles.modalContent}>
-                        <Text style={styles.modalTitle}>Enter house password</Text>
-                        <Text style={styles.modalSubtitle}>Password required to join {selectedHouseName}</Text>
+                <TouchableWithoutFeedback onPress={dismissKeyboard}>
+                    <View style={styles.modalOverlay}>
+                        <TouchableWithoutFeedback onPress={(e) => e.stopPropagation()}>
+                            <View style={styles.modalContent}>
+                                <Text style={styles.modalTitle}>Enter house password</Text>
+                                <Text style={styles.modalSubtitle}>Password required to join {selectedHouseName}</Text>
 
-                        <TextInput
-                            style={[
-                                styles.passwordInput,
-                                passwordError ? styles.inputError : null
-                            ]}
-                            placeholder="Password"
-                            placeholderTextColor="#666"
-                            value={password}
-                            onChangeText={setPassword}
-                            secureTextEntry
-                            autoCapitalize="none"
-                            autoFocus
-                        />
+                                <TextInput
+                                    style={[
+                                        styles.passwordInput,
+                                        passwordError ? styles.inputError : null
+                                    ]}
+                                    placeholder="Password"
+                                    placeholderTextColor="#666"
+                                    value={password}
+                                    onChangeText={setPassword}
+                                    secureTextEntry
+                                    autoCapitalize="none"
+                                    autoFocus
+                                    returnKeyType="done"
+                                    onSubmitEditing={validatePassword}
+                                />
 
-                        {passwordError ? (
-                            <Text style={styles.errorText}>{passwordError}</Text>
-                        ) : null}
+                                {passwordError ? (
+                                    <Text style={styles.errorText}>{passwordError}</Text>
+                                ) : null}
 
-                        <View style={styles.modalButtons}>
-                            <TouchableOpacity
-                                style={styles.cancelButton}
-                                onPress={() => setShowPasswordModal(false)}
-                            >
-                                <Text style={styles.cancelButtonText}>Cancel</Text>
-                            </TouchableOpacity>
+                                <View style={styles.modalButtons}>
+                                    <TouchableOpacity
+                                        style={styles.cancelButton}
+                                        onPress={() => setShowPasswordModal(false)}
+                                    >
+                                        <Text style={styles.cancelButtonText}>Cancel</Text>
+                                    </TouchableOpacity>
 
-                            <TouchableOpacity
-                                style={styles.confirmButton}
-                                onPress={validatePassword}
-                            >
-                                <Text style={styles.confirmButtonText}>Confirm</Text>
-                            </TouchableOpacity>
-                        </View>
+                                    <TouchableOpacity
+                                        style={styles.confirmButton}
+                                        onPress={validatePassword}
+                                    >
+                                        <Text style={styles.confirmButtonText}>Confirm</Text>
+                                    </TouchableOpacity>
+                                </View>
+                            </View>
+                        </TouchableWithoutFeedback>
                     </View>
-                </View>
+                </TouchableWithoutFeedback>
             </Modal>
         </View>
     )
@@ -235,20 +247,28 @@ const styles = StyleSheet.create({
         marginTop: 5,
         fontStyle: 'italic'
     },
+    floatingButtonContainer: {
+        position: 'absolute',
+        bottom: 30,
+        left: 0,
+        right: 0,
+        alignItems: 'center',
+        paddingHorizontal: 20,
+    },
     continueButton: {
         backgroundColor: '#4A154B',
         paddingHorizontal: 40,
         paddingVertical: 16,
         borderRadius: 6,
-        marginTop: 20,
+        width: '80%',
         flexDirection: 'row',
         alignItems: 'center',
         justifyContent: 'center',
         shadowColor: '#000',
         shadowOffset: { width: 0, height: 2 },
-        shadowOpacity: 0.2,
-        shadowRadius: 3,
-        elevation: 4,
+        shadowOpacity: 0.3,
+        shadowRadius: 5,
+        elevation: 6,
     },
     continueButtonText: {
         color: 'white',
@@ -266,9 +286,9 @@ const styles = StyleSheet.create({
         backgroundColor: '#FFF',
         borderRadius: 8,
         padding: 24,
+        shadowOpacity: 0.3,
         shadowColor: '#000',
         shadowOffset: { width: 0, height: 4 },
-        shadowOpacity: 0.3,
         shadowRadius: 6,
         elevation: 8,
     },

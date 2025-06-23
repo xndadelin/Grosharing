@@ -3,16 +3,26 @@ import 'dotenv/config';
 export default {
   expo: {
     name: "Grosharing",
-    slug: "Grosharing",
+    slug: "grosharing",
     version: "1.0.0",
     orientation: "portrait",
     icon: "./assets/images/icon.png",
     scheme: "grosharing",
     userInterfaceStyle: "automatic",
     newArchEnabled: true,
+    notification: {
+      icon: "./assets/images/notification-icon.png",
+      color: "#4A154B",
+      iosDisplayInForeground: true,
+    },
     ios: {
       supportsTablet: true,
-      bundleIdentifier: "com.grosharing.app"
+      bundleIdentifier: "com.grosharing.app",
+      infoPlist: {
+        UIBackgroundModes: ["remote-notification"],
+        UIRequiresPersistentWiFi: true,
+        UIApplicationExitsOnSuspend: false
+      }
     },
     android: {
       adaptiveIcon: {
@@ -30,6 +40,7 @@ export default {
     plugins: [
       "expo-router",
       "expo-web-browser",
+      "expo-notifications",
       [
         "expo-splash-screen",
         {
@@ -46,6 +57,9 @@ export default {
     extra: {
       supabaseUrl: process.env.EXPO_PUBLIC_SUPABASE_URL,
       supabaseAnonKey: process.env.EXPO_PUBLIC_SUPABASE_ANON_KEY,
+      eas: {
+        projectId: "d88c4112-b2d4-494d-8848-7136138d928c"
+      }
     },
   }
 };

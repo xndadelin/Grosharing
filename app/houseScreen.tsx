@@ -1,3 +1,4 @@
+import { registerForPushNotifications, sendAutomaticNotification } from "@/lib/notificationService";
 import { addGroceryItem, getGroceryItems, getUser, updateGroceryItemStatus } from "@/lib/queries";
 import { supabase } from "@/lib/supabase";
 import { useLocalSearchParams, useRouter } from "expo-router";
@@ -5,10 +6,14 @@ import React, { useEffect, useRef, useState } from "react";
 import { Alert, FlatList, Image, Keyboard, Modal, StyleSheet, Text, TextInput, TouchableOpacity, TouchableWithoutFeedback, View } from "react-native";
 
 const getUsers = async () => {
-    const { data, error } = await supabase.from('neighbors').select('*')
-    if(error) return []
-    return data;
-} 
+  const { data, error } = await supabase.from('neighbors').select('*')
+
+  if (error) {
+    return [];
+  }
+
+  return data || [];
+}
 
 export default function HouseScreen() {
   const { houseName } = useLocalSearchParams();
@@ -23,6 +28,7 @@ export default function HouseScreen() {
   });
   const [currentUser, setCurrentUser] = useState<any>(null);
   const [loading, setLoading] = useState(false);
+  const [pushToken, setPushToken] = useState<string | null>(null);
   const itemNameInputRef = useRef<TextInput>(null);
   const quantityInputRef = useRef<TextInput>(null);
   const descriptionInputRef = useRef<TextInput>(null);
@@ -36,17 +42,48 @@ export default function HouseScreen() {
           getGroceryItems(houseName as string),
           getUser()
         ]);
-        
+
         setUsers(usersData);
         setGroceryItems(itemsData);
         setCurrentUser(userData);
+
+
+        try {
+          const token = await registerForPushNotifications();
+          setPushToken(token);
+
+          if (token && userData?.id) {
+            const { data: existingUser, error: queryError } = await supabase
+              .from('neighbors')
+              .select('*')
+              .eq('slack_id', userData.id)
+              .eq('house', houseName)
+              .single();
+
+            if (queryError || !existingUser) {
+              return;
+            } else {
+              const { data: updateResult, error: updateError } = await supabase
+                .from('neighbors')
+                .update({ push_token: token })
+                .eq('slack_id', userData.id)
+                .eq('house', houseName);
+
+              if (updateError) {
+                console.error("[HOUSE] Error updating push token:", updateError);
+              }
+            }
+          }
+        } catch (error) {
+          console.error("[HOUSE] Push notifications not available:", error);
+        }
       } catch (error) {
         console.error("Error fetching data:", error);
       } finally {
         setLoading(false);
       }
     };
-    
+
     fetchData();
   }, []);
 
@@ -59,12 +96,12 @@ export default function HouseScreen() {
       Alert.alert("Required field", "Please enter an item name");
       return;
     }
-    
+
     const quantity = parseInt(newItem.quantity) || 1;
-    
+
     try {
       setLoading(true);
-      
+
       const result = await addGroceryItem({
         house: houseName as string,
         item_name: newItem.itemName,
@@ -73,14 +110,87 @@ export default function HouseScreen() {
         slack_id: currentUser?.id,
         added_by: currentUser?.user_metadata?.full_name || currentUser?.user_metadata?.name
       });
-      
+
       if (!result) {
         throw new Error('Failed to add grocery item');
       }
-      
+
       const updatedItems = await getGroceryItems(houseName as string);
       setGroceryItems(updatedItems);
-      
+
+      try {
+        const { data: allUsers, error: allUsersError } = await supabase
+          .from('neighbors')
+          .select('*');
+
+        if (allUsersError) {
+          console.error('[HOUSE] Error fetching all users:', allUsersError);
+        } else {
+          const usersByHouse: { [key: string]: any[] } = {};
+          (allUsers || []).forEach(user => {
+            if (!usersByHouse[user.house]) usersByHouse[user.house] = [];
+            usersByHouse[user.house].push(user);
+          });
+        }
+
+        console.log("[HOUSE] Querying users in current house:", houseName);
+        const { data: houseUsers, error: houseError } = await supabase
+          .from('neighbors')
+          .select('*')
+          .eq('house', houseName);
+
+        if (houseError) {
+          console.error('[HOUSE] Error fetching house users:', houseError);
+        } else {
+          const usersWithTokens = houseUsers?.filter(u => !!u.push_token) || [];
+
+          if (usersWithTokens.length === 0) {
+            console.warn('[HOUSE] No users in this house have push tokens registered');
+          }
+        }
+
+        const usersToNotify = houseError ? users : (houseUsers || []);
+
+        let sentCount = 0;
+
+        const currentUserId = String(currentUser?.id || "");
+
+        for (const user of usersToNotify) {
+          const userSlackId = String(user.slack_id || "");
+          const isSameUser = currentUserId === userSlackId;
+
+          if (user.push_token) {
+            const notificationBody = isSameUser ?
+              `You added ${newItem.itemName} to the shopping list` :
+              `${currentUser?.user_metadata?.full_name} added ${newItem.itemName} to the shopping list`;
+
+            try {
+              await sendAutomaticNotification(
+                user.push_token,
+                'groceryItemAdded',
+                {
+                  title: 'New grocery item added',
+                  body: notificationBody,
+                  data: {
+                    itemName: newItem.itemName,
+                    addedBy: currentUser?.user_metadata?.full_name,
+                    isSelfAction: isSameUser,
+                    timestamp: new Date().toISOString()
+                  }
+                }
+              );
+              sentCount++;
+            } catch (notifError) {
+              console.error(`[HOUSE] Failed to send notification to ${user.full_name}:`, notifError);
+            }
+          } else {
+            console.log(`[HOUSE] User ${user.full_name} has no push token`);
+          }
+        };
+      } catch (error) {
+        console.error('[HOUSE] Error in notification process:', error);
+      }
+
       setShowAddModal(false);
       setNewItem({
         itemName: "",
@@ -94,7 +204,7 @@ export default function HouseScreen() {
       setLoading(false);
     }
   };
-  
+
   const dismissKeyboardAndModal = () => {
     Keyboard.dismiss();
     setShowAddModal(false);
@@ -104,32 +214,78 @@ export default function HouseScreen() {
       description: ""
     });
   };
-  
+
   const toggleItemCompleted = async (itemId: number, currentStatus: boolean) => {
     try {
       setLoading(true);
-      const userName = currentUser?.user_metadata?.full_name || currentUser?.user_metadata?.name || "Unknown user";
-      
+      const userName = currentUser?.user_metadata?.full_name || currentUser?.user_metadata?.name
+
       await updateGroceryItemStatus(itemId, !currentStatus, userName);
-      
-      setGroceryItems(prev => 
-        prev.map(item => 
+
+      const updatedItems = (prev: any) =>
+        prev.map((item: any) =>
           item.id === itemId ? {
-            ...item, 
-            completed: !item.completed,
+            ...item,
+            completed: !currentStatus,
             completed_by: !currentStatus ? userName : null
           } : item
-        )
-      );
+        );
+
+      setGroceryItems(updatedItems);
+
+      if (!currentStatus) {
+        try {
+          const { data: houseUsers, error: houseError } = await supabase
+            .from('neighbors')
+            .select('*')
+            .eq('house', houseName);
+
+          const usersToNotify = houseError ? users : (houseUsers || []);
+          const currentUserId = String(currentUser?.id || "");
+          const itemName = groceryItems.find(item => item.id === itemId)?.item_name
+
+          let sentCount = 0;
+          for (const user of usersToNotify) {
+            const userSlackId = String(user.slack_id || "");
+            const isSameUser = currentUserId === userSlackId;
+
+            if (user.push_token) {
+              const notificationBody = isSameUser ?
+                `You purchased ${itemName}` :
+                `${userName} purchased ${itemName}`;
+              try {
+                await sendAutomaticNotification(
+                  user.push_token,
+                  'groceryItemCompleted',
+                  {
+                    title: 'Item Completed',
+                    body: notificationBody,
+                    data: {
+                      itemName: itemName,
+                      completedBy: userName,
+                      isSelfAction: isSameUser,
+                      timestamp: new Date().toISOString()
+                    }
+                  }
+                );
+                sentCount++;
+              } catch (notifError) {
+                console.error(`[HOUSE] Failed to send completion notification to ${user.full_name}:`, notifError);
+              }
+            } else {
+              console.log(`[HOUSE] User ${user.full_name} has no push token for completion notification`);
+            }
+          }
+        } catch (error) {
+          console.error('[HOUSE] Error sending completion notifications:', error);
+        }
+      }
     } catch (error) {
       Alert.alert("Error", "Failed to update item status");
-      console.error(error);
     } finally {
       setLoading(false);
     }
   };
-  
-
 
   return (
     <View style={styles.container}>
@@ -137,7 +293,7 @@ export default function HouseScreen() {
         <Text style={styles.houseName}>{houseName}</Text>
         <View style={styles.divider} />
       </View>
-      
+
       <View style={styles.section}>
         <Text style={styles.sectionTitle}>Neighbors</Text>
         <FlatList
@@ -166,18 +322,18 @@ export default function HouseScreen() {
           }
         />
       </View>
-      
+
       <View style={styles.section}>
         <View style={styles.sectionHeader}>
           <Text style={styles.sectionTitle}>Grocery list</Text>
-          <TouchableOpacity 
+          <TouchableOpacity
             style={styles.addButton}
             onPress={() => setShowAddModal(true)}
           >
             <Text style={styles.addButtonText}>Add grocery</Text>
           </TouchableOpacity>
         </View>
-        
+
         <FlatList
           data={groceryItems}
           keyExtractor={(item) => item.id?.toString()}
@@ -192,11 +348,11 @@ export default function HouseScreen() {
                   <Text style={styles.checkmark}>✓</Text>
                 )}
               </TouchableOpacity>
-              
+
               <View style={styles.groceryItemContent}>
                 <View style={styles.groceryItemHeader}>
                   <Text style={[
-                    styles.groceryItemName, 
+                    styles.groceryItemName,
                     item.completed && styles.groceryItemCompleted
                   ]}>
                     {item.item_name}
@@ -205,13 +361,13 @@ export default function HouseScreen() {
                     {item.quantity} {parseInt(item.quantity) === 1 ? 'piece' : 'pieces'}
                   </Text>
                 </View>
-                
+
                 {item.description ? (
                   <Text style={styles.groceryItemDescription} numberOfLines={2}>
                     {item.description}
                   </Text>
                 ) : null}
-                
+
                 <View style={styles.groceryItemFooter}>
                   <Text style={styles.groceryItemAddedBy}>
                     Added by {item.added_by}
@@ -233,11 +389,11 @@ export default function HouseScreen() {
           }
         />
       </View>
-      
-      <TouchableOpacity style={styles.backButton} onPress={() => router.replace("/home")}> 
+
+      <TouchableOpacity style={styles.backButton} onPress={() => router.replace("/home")}>
         <Text style={styles.backButtonText}>Back to houses</Text>
       </TouchableOpacity>
-      
+
       <Modal
         visible={showAddModal}
         transparent={true}
@@ -249,21 +405,21 @@ export default function HouseScreen() {
             <TouchableWithoutFeedback onPress={(e) => e.stopPropagation()}>
               <View style={styles.modalContent}>
                 <Text style={styles.modalTitle}>Add grocery item</Text>
-                
+
                 <Text style={styles.inputLabel}>Item name *</Text>
                 <TextInput
                   style={styles.textInput}
                   placeholder="e.g., milk"
                   placeholderTextColor="#999"
                   value={newItem.itemName}
-                  onChangeText={(text) => setNewItem(prev => ({...prev, itemName: text}))}
+                  onChangeText={(text) => setNewItem(prev => ({ ...prev, itemName: text }))}
                   autoFocus
                   returnKeyType="next"
                   onSubmitEditing={() => quantityInputRef.current?.focus()}
                   blurOnSubmit={false}
                   ref={itemNameInputRef}
                 />
-                
+
                 <Text style={styles.inputLabel}>Quantity</Text>
                 <TextInput
                   style={styles.textInput}
@@ -271,13 +427,13 @@ export default function HouseScreen() {
                   placeholderTextColor="#999"
                   keyboardType="numeric"
                   value={newItem.quantity}
-                  onChangeText={(text) => setNewItem(prev => ({...prev, quantity: text}))}
+                  onChangeText={(text) => setNewItem(prev => ({ ...prev, quantity: text }))}
                   returnKeyType="next"
                   onSubmitEditing={() => descriptionInputRef.current?.focus()}
                   blurOnSubmit={false}
                   ref={quantityInputRef}
                 />
-                
+
                 <Text style={styles.inputLabel}>Description (optional)</Text>
                 <TextInput
                   style={[styles.textInput, styles.textAreaInput]}
@@ -286,7 +442,7 @@ export default function HouseScreen() {
                   multiline
                   numberOfLines={3}
                   value={newItem.description}
-                  onChangeText={(text) => setNewItem(prev => ({...prev, description: text}))}
+                  onChangeText={(text) => setNewItem(prev => ({ ...prev, description: text }))}
                   returnKeyType="done"
                   blurOnSubmit={true}
                   onSubmitEditing={() => {
@@ -295,7 +451,7 @@ export default function HouseScreen() {
                   }}
                   ref={descriptionInputRef}
                 />
-            
+
                 <View style={styles.modalButtons}>
                   <TouchableOpacity
                     style={styles.cancelButton}
@@ -308,7 +464,7 @@ export default function HouseScreen() {
                     style={styles.confirmButton}
                     onPress={handleAddGroceryItem}
                     disabled={loading}
-                  >              
+                  >
                     <Text style={styles.confirmButtonText}>
                       {loading ? "Adding..." : "Add item"}
                     </Text>
@@ -324,7 +480,7 @@ export default function HouseScreen() {
 }
 
 const styles = StyleSheet.create({
-  container:{
+  container: {
     backgroundColor: 'rgb(255, 249, 230)',
     height: '100%',
     width: '100%',

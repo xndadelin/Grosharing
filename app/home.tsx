@@ -1,4 +1,5 @@
 import { Avatar } from "@/components/Avatar"
+import { registerForPushNotifications } from "@/lib/notificationService"
 import { getUser } from "@/lib/queries"
 import { supabase } from "@/lib/supabase"
 import type { User } from "@supabase/supabase-js"
@@ -43,7 +44,7 @@ export const Houses = () => {
                 const userData = await getUser()
                 setUser(userData)
             } catch (error) {
-                console.error("Error loading user:", error)
+                console.log('Error loading user:', error)
             } finally {
                 setLoading(false)
             }
@@ -71,7 +72,6 @@ export const Houses = () => {
             
             return !error && data !== null;
         } catch (error) {
-            console.error("Error checking password:", error);
             return false;
         }
     }
@@ -107,14 +107,30 @@ export const Houses = () => {
               .eq('house', selectedHouseName);
 
             if(neighborExists?.length === 0) {
+                let pushToken = null;
+                try {
+                    pushToken = await registerForPushNotifications();
+                    
+                    if (pushToken && (!pushToken.startsWith('ExponentPushToken[') || !pushToken.endsWith(']'))) {
+                        console.log("Invalid push token format:", pushToken)
+                    }
+                } catch (error) {
+                    console.log("Failed to get push token:", error)
+                }
+                
                 const neighbor = {
                     house: selectedHouseName,
                     slack_id: user?.id,
                     avatar_url: user?.user_metadata?.avatar_url,
-                    full_name: user?.user_metadata?.full_name || user?.user_metadata?.name
+                    full_name: user?.user_metadata?.full_name || user?.user_metadata?.name,
+                    push_token: pushToken
                 };
-
-                const { error: insertError } = await supabase.from('neighbors').insert(neighbor);
+                
+                const { data: insertedData, error: insertError } = await supabase.from('neighbors').insert(neighbor).select();
+                
+                if (insertError) {
+                    console.log("Error inserting neighbor:", insertError)
+                }
             }
 
             router.replace({

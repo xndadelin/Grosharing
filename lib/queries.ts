@@ -75,3 +75,30 @@ export const updateGroceryItemStatus = async(itemId: number, completed: boolean,
     return data;
 }
 
+export const getHouseMembersCount = async(): Promise<Record<string, number>> => {
+    try {
+        const { data, error } = await supabase
+            .from('neighbors')
+            .select('house');
+
+        if (error) {
+            console.error('Error fetching house members:', error);
+            return {};
+        }
+
+        // Count neighbors by house
+        const memberCounts: Record<string, number> = {};
+        data.forEach(neighbor => {
+            const houseName = neighbor.house;
+            if (houseName) {
+                memberCounts[houseName] = (memberCounts[houseName] || 0) + 1;
+            }
+        });
+
+        return memberCounts;
+    } catch (error) {
+        console.error('Error in getHouseMembersCount:', error);
+        return {};
+    }
+};
+

@@ -18,7 +18,7 @@ const getUsers = async () => {
 
 export default function HouseScreen() {
   const params = useLocalSearchParams();
-  const houseName = params.houseName?.toString() || "";
+  const houseName = typeof params.houseName === 'string' ? params.houseName : "";
   const router = useRouter();
   const [users, setUsers] = useState<any[]>([]);
   const [groceryItems, setGroceryItems] = useState<any[]>([]);

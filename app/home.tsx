@@ -1,6 +1,6 @@
 import { Avatar } from "@/components/Avatar"
 import { registerForPushNotifications } from "@/lib/notificationService"
-import { getUser } from "@/lib/queries"
+import { getHouseMembersCount, getUser } from "@/lib/queries"
 import { supabase } from "@/lib/supabase"
 import type { User } from "@supabase/supabase-js"
 import { useRouter } from "expo-router"
@@ -16,6 +16,7 @@ export const Houses = () => {
     const [password, setPassword] = useState("")
     const [passwordError, setPasswordError] = useState("")
     const [selectedHouseName, setSelectedHouseName] = useState("")
+    const [memberCounts, setMemberCounts] = useState<Record<string, number>>({})
     const router = useRouter()
 
     const houses = [
@@ -39,18 +40,22 @@ export const Houses = () => {
         }
     ];
     useEffect(() => {
-        const loadUser = async () => {
+        const loadData = async () => {
             try {
-                const userData = await getUser()
-                setUser(userData)
+                const [userData, membersData] = await Promise.all([
+                    getUser(),
+                    getHouseMembersCount()
+                ]);
+                setUser(userData);
+                setMemberCounts(membersData);
             } catch (error) {
-                console.log('Error loading user:', error)
+                console.log('Error loading data:', error)
             } finally {
                 setLoading(false)
             }
         }
 
-        loadUser()
+        loadData()
     }, [])
 
     if (loading) {
@@ -169,6 +174,7 @@ export const Houses = () => {
                         imageUrl={house.imageUrl}
                         selected={selectedHouse === house.id}
                         onSelect={() => handleHouseSelect(house.id)}
+                        membersCount={memberCounts[house.name] || 0}
                     />
                 ))}
             </ScrollView>

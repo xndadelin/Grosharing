@@ -6,9 +6,10 @@ type HouseCardProps = {
     imageUrl: any;
     selected: boolean;
     onSelect: () => void;
+    membersCount?: number;
 };
 
-export const HouseCard = ({ name, location, imageUrl, selected, onSelect }: HouseCardProps) => {
+export const HouseCard = ({ name, location, imageUrl, selected, onSelect, membersCount = 0 }: HouseCardProps) => {
     return (
         <TouchableOpacity 
             style={[
@@ -17,7 +18,13 @@ export const HouseCard = ({ name, location, imageUrl, selected, onSelect }: Hous
             ]} 
             onPress={onSelect}
         >
-            <Image source={imageUrl} style={styles.cardImage} />
+            <View style={styles.imageContainer}>
+                <Image source={imageUrl} style={styles.cardImage} />
+                <View style={styles.membersCountBadge}>
+                    <Text style={styles.membersCountText}>{membersCount}</Text>
+                    <Text style={styles.memberLabel}>{membersCount === 1 ? 'member' : 'members'}</Text>
+                </View>
+            </View>
             <View style={styles.cardContent}>
                 <Text style={styles.cardTitle}>{name}</Text>
                 <Text style={styles.cardSubtitle}>{location}</Text>
@@ -53,11 +60,36 @@ const styles = StyleSheet.create({
         shadowOpacity: 0.2,
         shadowRadius: 10,
     },
+    imageContainer: {
+        position: 'relative',
+        width: '100%',
+    },
     cardImage: {
         width: '100%',
         height: 150,
         borderTopLeftRadius: 8,
         borderTopRightRadius: 8,
+    },
+    membersCountBadge: {
+        position: 'absolute',
+        bottom: 10,
+        right: 10,
+        backgroundColor: 'rgba(74, 21, 75, 0.85)',
+        borderRadius: 8,
+        paddingVertical: 6,
+        paddingHorizontal: 10,
+        alignItems: 'center',
+        justifyContent: 'center',
+    },
+    membersCountText: {
+        color: 'white',
+        fontWeight: 'bold',
+        fontSize: 18,
+    },
+    memberLabel: {
+        color: 'white',
+        fontSize: 10,
+        fontWeight: '500',
     },
     cardContent: {
         padding: 16,

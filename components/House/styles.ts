@@ -1,0 +1,168 @@
+import { StyleSheet } from 'react-native';
+
+export const COLORS = {
+  PRIMARY: '#4A154B',
+  PRIMARY_LIGHT: 'rgba(74, 21, 75, 0.1)',
+  SUCCESS: '#4A9B3D',
+  DANGER: '#E74C3C',
+  WARNING: '#e07b00',
+  WHITE: '#FFFFFF',
+  BACKGROUND: 'rgb(255, 249, 230)',
+  TEXT_DARK: '#333',
+  TEXT_MEDIUM: '#666',
+  TEXT_LIGHT: '#888',
+  BORDER: '#DDD',
+  GREY_LIGHT: '#f0f0f0',
+  GREY_DARK: '#9E9E9E',
+};
+
+export const commonStyles = StyleSheet.create({
+  container: {
+    backgroundColor: COLORS.BACKGROUND,
+    width: '100%',
+    flex: 1,
+    padding: 20,
+  },
+  contentContainer: {
+    paddingBottom: 100,
+  },
+  section: {
+    marginBottom: 24,
+    backgroundColor: COLORS.WHITE,
+    borderRadius: 6, 
+    padding: 20,
+    minHeight: 100, 
+    height: 'auto',
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 3 },
+    shadowOpacity: 0.12,
+    shadowRadius: 8,
+    elevation: 4,
+  },
+  sectionTitle: {
+    fontSize: 22,
+    fontWeight: 'bold',
+    color: COLORS.PRIMARY,
+    marginBottom: 16,
+  },
+  formField: {
+    marginBottom: 16,
+  },
+  formRow: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    marginBottom: 16,
+  },
+  button: {
+    backgroundColor: COLORS.PRIMARY,
+    paddingVertical: 10,
+    paddingHorizontal: 18,
+    borderRadius: 4,
+    shadowColor: COLORS.PRIMARY,
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.25,
+    shadowRadius: 4,
+    elevation: 3,
+  },
+  buttonText: {
+    color: COLORS.WHITE,
+    fontWeight: 'bold',
+    fontSize: 14,
+  },
+  emptyStateContainer: {
+    padding: 30,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  emptyStateIconContainer: {
+    width: 70,
+    height: 70,
+    borderRadius: 8, 
+    backgroundColor: COLORS.PRIMARY_LIGHT,
+    justifyContent: 'center',
+    alignItems: 'center',
+    marginBottom: 16,
+  },
+  emptyStateIcon: {
+    fontSize: 32,
+  },
+  emptyStateText: {
+    fontSize: 18,
+    fontWeight: 'bold',
+    color: COLORS.TEXT_DARK,
+    textAlign: 'center',
+  },
+  emptyStateSubtext: {
+    fontSize: 15,
+    color: COLORS.TEXT_MEDIUM,
+    textAlign: 'center',
+    marginTop: 8,
+    marginBottom: 16,
+  },
+});
+
+export const modalStyles = StyleSheet.create({
+  overlay: {
+    flex: 1,
+    backgroundColor: 'rgba(0,0,0,0.6)',
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  content: {
+    width: '90%',
+    backgroundColor: COLORS.WHITE,
+    borderRadius: 8,
+    padding: 24,
+    shadowOpacity: 0.3,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 4 },
+    shadowRadius: 12,
+    elevation: 10,
+  },
+  title: {
+    fontSize: 24,
+    fontWeight: 'bold',
+    marginBottom: 20,
+    color: COLORS.PRIMARY,
+    textAlign: 'center',
+  },
+  buttonsContainer: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    marginTop: 16,
+  },
+  cancelButton: {
+    paddingVertical: 14,
+    paddingHorizontal: 15,
+    borderRadius: 4,
+    backgroundColor: COLORS.GREY_LIGHT,
+    flex: 1,
+    marginRight: 10,
+    alignItems: 'center',
+  },
+  confirmButton: {
+    paddingVertical: 14,
+    paddingHorizontal: 15,
+    borderRadius: 4, 
+    backgroundColor: COLORS.PRIMARY,
+    flex: 1,
+    marginLeft: 10,
+    alignItems: 'center',
+  },
+  cancelText: {
+    textAlign: 'center',
+    color: COLORS.TEXT_DARK,
+    fontWeight: 'bold',
+    fontSize: 16,
+  },
+  confirmText: {
+    textAlign: 'center',
+    color: COLORS.WHITE,
+    fontWeight: 'bold',
+    fontSize: 16,
+  },
+  disabledButton: {
+    backgroundColor: COLORS.GREY_DARK,
+    opacity: 0.7,
+  },
+});

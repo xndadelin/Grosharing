@@ -13,10 +13,57 @@ export const getGroceryItems = async(houseName: string) => {
         .order('created_at', { ascending: false });
     
     if(error) {
-        console.error('Error fetching grocery items:', error);
         return [];
     }
     return data || [];
+}
+export const setHouseBudget = async (houseName: string, budget: number) => {
+    try {
+        const { data, error } = await supabase
+            .from('house_budgets')
+            .upsert(
+                [{ 
+                    house_name: houseName, 
+                    budget, 
+                    updated_at: new Date() 
+                }], 
+                { onConflict: 'house_name' }
+            );
+        
+        if (error) {
+            console.error('Error setting house budget:', error);
+            return null;
+        }
+        
+        const { data: checkData, error: checkError } = await supabase
+            .from('house_budgets')
+            .select('budget')
+            .eq('house_name', houseName)
+            .maybeSingle();
+            
+        if (checkError) {
+            console.error('Error checking house budget after update:', checkError);
+            return null;
+        }
+        
+        return checkData || data;
+    } catch (err) {
+        console.error('Unexpected error in setHouseBudget:', err);
+        return null;
+    }
+};
+
+export const getHouseBudget = async (houseName: string): Promise<number> => {
+    const { data, error } = await supabase
+        .from('house_budgets')
+        .select('budget')
+        .eq('house_name', houseName)
+        .maybeSingle();
+    if (error) {
+        console.error('Error fetching house budget:', error);
+        return 0;
+    }
+    return data?.budget || 0;
 }
 
 export const addGroceryItem = async(item: {
@@ -27,6 +74,7 @@ export const addGroceryItem = async(item: {
     slack_id: string;
     added_by: string;
     image_url?: string;
+    price?: number;
 }) => {
     const { data: userData } = await supabase.auth.getUser();
     const userUid = userData?.user?.id;
@@ -46,7 +94,8 @@ export const addGroceryItem = async(item: {
             slack_id: userUid,
             user_slack_id: item.slack_id,
             added_by: item.added_by,
-            image_url: item.image_url || null
+            image_url: item.image_url || null,
+            price: item.price || null
         }])
         .select();
     
@@ -57,6 +106,20 @@ export const addGroceryItem = async(item: {
     
     return data;
 }
+
+export const getTotalSpent = async (houseName: string): Promise<number> => {
+    const { data, error } = await supabase
+        .from('grocery_items')
+        .select('price')
+        .eq('house', houseName)
+        .eq('completed', true);
+    if (error) {
+        console.error('Error fetching spent items:', error);
+        return 0;
+    }
+    const total = (data || []).reduce((sum, item) => sum + (item.price || 0), 0);
+    return total;
+};
 
 export const updateGroceryItemStatus = async(itemId: number, completed: boolean, completedBy: string) => {
     const updateData = completed ? { completed, completed_by: completedBy } : { completed, completed_by: null };
@@ -86,7 +149,6 @@ export const getHouseMembersCount = async(): Promise<Record<string, number>> => 
             return {};
         }
 
-        // Count neighbors by house
         const memberCounts: Record<string, number> = {};
         data.forEach(neighbor => {
             const houseName = neighbor.house;

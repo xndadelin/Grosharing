@@ -26,6 +26,7 @@ export const addGroceryItem = async(item: {
     description: string;
     slack_id: string;
     added_by: string;
+    image_url?: string;
 }) => {
     const { data: userData } = await supabase.auth.getUser();
     const userUid = userData?.user?.id;
@@ -44,7 +45,8 @@ export const addGroceryItem = async(item: {
             description: item.description,
             slack_id: userUid,
             user_slack_id: item.slack_id,
-            added_by: item.added_by
+            added_by: item.added_by,
+            image_url: item.image_url || null
         }])
         .select();
     

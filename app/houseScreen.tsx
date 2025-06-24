@@ -1,9 +1,10 @@
+import { pickImage, takePicture, uploadImageToSupabase } from "@/lib/imageService";
 import { registerForPushNotifications, sendAutomaticNotification } from "@/lib/notificationService";
 import { addGroceryItem, getGroceryItems, getUser, updateGroceryItemStatus } from "@/lib/queries";
 import { supabase } from "@/lib/supabase";
 import { useLocalSearchParams, useRouter } from "expo-router";
 import React, { useEffect, useRef, useState } from "react";
-import { Alert, FlatList, Image, Keyboard, Modal, StyleSheet, Text, TextInput, TouchableOpacity, TouchableWithoutFeedback, View } from "react-native";
+import { ActivityIndicator, Alert, Dimensions, FlatList, Image, Keyboard, Modal, StyleSheet, Text, TextInput, TouchableOpacity, TouchableWithoutFeedback, View } from "react-native";
 
 const getUsers = async () => {
   const { data, error } = await supabase.from('neighbors').select('*')
@@ -16,7 +17,8 @@ const getUsers = async () => {
 }
 
 export default function HouseScreen() {
-  const { houseName } = useLocalSearchParams();
+  const params = useLocalSearchParams();
+  const houseName = params.houseName?.toString() || "";
   const router = useRouter();
   const [users, setUsers] = useState<any[]>([]);
   const [groceryItems, setGroceryItems] = useState<any[]>([]);
@@ -24,11 +26,16 @@ export default function HouseScreen() {
   const [newItem, setNewItem] = useState({
     itemName: "",
     quantity: "",
-    description: ""
+    description: "",
+    imageUri: "",
+    imageUrl: ""
   });
   const [currentUser, setCurrentUser] = useState<any>(null);
   const [loading, setLoading] = useState(false);
   const [pushToken, setPushToken] = useState<string | null>(null);
+  const [selectedImage, setSelectedImage] = useState<string | null>(null);
+  const [imageViewVisible, setImageViewVisible] = useState(false);
+  const [imageLoading, setImageLoading] = useState(false);
   const itemNameInputRef = useRef<TextInput>(null);
   const quantityInputRef = useRef<TextInput>(null);
   const descriptionInputRef = useRef<TextInput>(null);
@@ -39,12 +46,16 @@ export default function HouseScreen() {
       try {
         const [usersData, itemsData, userData] = await Promise.all([
           getUsers(),
-          getGroceryItems(houseName as string),
+          getGroceryItems(houseName),
           getUser()
         ]);
 
         setUsers(usersData);
-        setGroceryItems(itemsData);
+        const itemsWithLoadingState = itemsData.map(item => ({
+          ...item,
+          isImageLoading: false
+        }));
+        setGroceryItems(itemsWithLoadingState);
         setCurrentUser(userData);
 
 
@@ -91,6 +102,17 @@ export default function HouseScreen() {
     (u) => u.house === houseName
   );
 
+  const handleImageSelection = async (useCamera = false) => {
+    const imageUri = useCamera ? await takePicture() : await pickImage();
+    
+    if (imageUri) {
+      setNewItem(prev => ({
+        ...prev,
+        imageUri
+      }));
+    }
+  };
+  
   const handleAddGroceryItem = async () => {
     if (!newItem.itemName.trim()) {
       Alert.alert("Required field", "Please enter an item name");
@@ -101,22 +123,32 @@ export default function HouseScreen() {
 
     try {
       setLoading(true);
+      
+      let imageUrl = null;
+      if (newItem.imageUri) {
+        imageUrl = await uploadImageToSupabase(newItem.imageUri);
+      }
 
       const result = await addGroceryItem({
-        house: houseName as string,
+        house: houseName,
         item_name: newItem.itemName,
         quantity,
         description: newItem.description,
         slack_id: currentUser?.id,
-        added_by: currentUser?.user_metadata?.full_name || currentUser?.user_metadata?.name
+        added_by: currentUser?.user_metadata?.full_name || currentUser?.user_metadata?.name,
+        image_url: imageUrl ?? undefined
       });
 
       if (!result) {
         throw new Error('Failed to add grocery item');
       }
 
-      const updatedItems = await getGroceryItems(houseName as string);
-      setGroceryItems(updatedItems);
+      const updatedItems = await getGroceryItems(houseName);
+      const itemsWithLoadingState = updatedItems.map(item => ({
+        ...item,
+        isImageLoading: false
+      }));
+      setGroceryItems(itemsWithLoadingState);
 
       try {
         const { data: allUsers, error: allUsersError } = await supabase
@@ -195,7 +227,9 @@ export default function HouseScreen() {
       setNewItem({
         itemName: "",
         quantity: "",
-        description: ""
+        description: "",
+        imageUri: "",
+        imageUrl: ""
       });
     } catch (error) {
       Alert.alert("Error", "Failed to add grocery item");
@@ -211,8 +245,16 @@ export default function HouseScreen() {
     setNewItem({
       itemName: "",
       quantity: "",
-      description: ""
+      description: "",
+      imageUri: "",
+      imageUrl: ""
     });
+  };
+  
+  const openImageView = (imageUrl: string) => {
+    setImageLoading(true);
+    setSelectedImage(imageUrl);
+    setImageViewVisible(true);
   };
 
   const toggleItemCompleted = async (itemId: number, currentStatus: boolean) => {
@@ -222,16 +264,15 @@ export default function HouseScreen() {
 
       await updateGroceryItemStatus(itemId, !currentStatus, userName);
 
-      const updatedItems = (prev: any) =>
-        prev.map((item: any) =>
+      setGroceryItems((prev) =>
+        prev.map((item) =>
           item.id === itemId ? {
             ...item,
             completed: !currentStatus,
             completed_by: !currentStatus ? userName : null
           } : item
-        );
-
-      setGroceryItems(updatedItems);
+        )
+      );
 
       if (!currentStatus) {
         try {
@@ -347,9 +388,53 @@ export default function HouseScreen() {
                 {item.completed && (
                   <Text style={styles.checkmark}>✓</Text>
                 )}
-              </TouchableOpacity>
-
-              <View style={styles.groceryItemContent}>
+              </TouchableOpacity>                <View style={styles.groceryItemContent}>
+                {item.image_url && (
+                  <TouchableOpacity onPress={() => openImageView(item.image_url)}>
+                    <View style={styles.imageContainer}>
+                      <Image 
+                        source={{ uri: item.image_url }} 
+                        style={styles.groceryItemImage} 
+                        resizeMode="cover"
+                        onLoadStart={() => {
+                          setGroceryItems((prevItems) => 
+                            prevItems.map((groceryItem) => 
+                              groceryItem.id === item.id 
+                                ? { ...groceryItem, isImageLoading: true } 
+                                : groceryItem
+                            )
+                          );
+                        }}
+                        onLoadEnd={() => {
+                          setGroceryItems((prevItems) => 
+                            prevItems.map((groceryItem) => 
+                              groceryItem.id === item.id 
+                                ? { ...groceryItem, isImageLoading: false } 
+                                : groceryItem
+                            )
+                          );
+                        }}
+                        onError={() => {
+                          console.error(`Failed to load image: ${item.image_url}`);
+                          setGroceryItems((prevItems) => 
+                            prevItems.map((groceryItem) => 
+                              groceryItem.id === item.id 
+                                ? { ...groceryItem, isImageLoading: false } 
+                                : groceryItem
+                            )
+                          );
+                        }}
+                      />
+                      {item.isImageLoading && (
+                        <ActivityIndicator 
+                          style={styles.imageLoader} 
+                          size="large" 
+                          color="#4A154B" 
+                        />
+                      )}
+                    </View>
+                  </TouchableOpacity>
+                )}
                 <View style={styles.groceryItemHeader}>
                   <Text style={[
                     styles.groceryItemName,
@@ -393,6 +478,52 @@ export default function HouseScreen() {
       <TouchableOpacity style={styles.backButton} onPress={() => router.replace("/home")}>
         <Text style={styles.backButtonText}>Back to houses</Text>
       </TouchableOpacity>
+      
+      <Modal
+        visible={imageViewVisible}
+        transparent={true}
+        animationType="fade"
+        onRequestClose={() => {
+          setImageViewVisible(false);
+          setImageLoading(false);
+        }}
+      >
+        <TouchableWithoutFeedback onPress={() => setImageViewVisible(false)}>
+          <View style={styles.imageViewerContainer}>
+            <TouchableOpacity 
+              style={styles.imageViewerCloseButton}
+              onPress={() => setImageViewVisible(false)}
+            >
+              <Text style={styles.imageViewerCloseText}>✕</Text>
+            </TouchableOpacity>
+            
+            {selectedImage && (
+              <TouchableWithoutFeedback onPress={(e) => e.stopPropagation()}>
+                <View style={styles.imageViewerContent}>
+                  <Image 
+                    source={{ uri: selectedImage }} 
+                    style={styles.imageViewerImage}
+                    resizeMode="contain"
+                    onLoadStart={() => setImageLoading(true)}
+                    onLoadEnd={() => setImageLoading(false)}
+                    onError={() => {
+                      setImageLoading(false);
+                      console.error(`Failed to load fullscreen image: ${selectedImage}`);
+                    }}
+                  />
+                  {imageLoading && (
+                    <ActivityIndicator 
+                      style={styles.fullscreenImageLoader} 
+                      size="large" 
+                      color="#ffffff" 
+                    />
+                  )}
+                </View>
+              </TouchableWithoutFeedback>
+            )}
+          </View>
+        </TouchableWithoutFeedback>
+      </Modal>
 
       <Modal
         visible={showAddModal}
@@ -447,10 +578,41 @@ export default function HouseScreen() {
                   blurOnSubmit={true}
                   onSubmitEditing={() => {
                     Keyboard.dismiss();
-                    handleAddGroceryItem();
                   }}
                   ref={descriptionInputRef}
                 />
+                
+                <Text style={styles.inputLabel}>Add image (optional)</Text>
+                <View style={styles.imageButtonsContainer}>
+                  <TouchableOpacity 
+                    style={styles.imageButton} 
+                    onPress={() => handleImageSelection(false)}
+                  >
+                    <Text style={styles.imageButtonText}>Choose from library</Text>
+                  </TouchableOpacity>
+                  
+                  <TouchableOpacity 
+                    style={styles.imageButton} 
+                    onPress={() => handleImageSelection(true)}
+                  >
+                    <Text style={styles.imageButtonText}>Take a sexy pic of the item</Text>
+                  </TouchableOpacity>
+                </View>
+                
+                {newItem.imageUri ? (
+                  <View style={styles.previewContainer}>
+                    <Image 
+                      source={{ uri: newItem.imageUri }} 
+                      style={styles.previewImage} 
+                    />
+                    <TouchableOpacity 
+                      style={styles.removeImageButton}
+                      onPress={() => setNewItem(prev => ({ ...prev, imageUri: '' }))}
+                    >
+                      <Text style={styles.removeImageText}>✕</Text>
+                    </TouchableOpacity>
+                  </View>
+                ) : null}
 
                 <View style={styles.modalButtons}>
                   <TouchableOpacity
@@ -603,6 +765,31 @@ const styles = StyleSheet.create({
     color: '#666',
     marginBottom: 4,
   },
+  imageContainer: {
+    width: '100%',
+    height: 150,
+    borderRadius: 8,
+    marginBottom: 10,
+    backgroundColor: '#f0f0f0',
+    justifyContent: 'center',
+    alignItems: 'center',
+    overflow: 'hidden',
+    position: 'relative',
+  },
+  imageLoader: {
+    position: 'absolute',
+    top: 0,
+    left: 0,
+    right: 0,
+    bottom: 0,
+    backgroundColor: 'rgba(255,255,255,0.3)',
+  },
+  groceryItemImage: {
+    width: '100%',
+    height: 150,
+    borderRadius: 8,
+    marginBottom: 0,
+  },
   groceryItemFooter: {
     flexDirection: 'row',
     justifyContent: 'space-between',
@@ -750,5 +937,89 @@ const styles = StyleSheet.create({
     textAlign: 'center',
     color: '#FFF',
     fontWeight: 'bold',
+  },
+  imageButtonsContainer: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    marginBottom: 16,
+  },
+  imageButton: {
+    backgroundColor: '#4A154B',
+    paddingVertical: 12,
+    paddingHorizontal: 12,
+    borderRadius: 6,
+    flex: 1,
+    marginHorizontal: 4,
+  },
+  imageButtonText: {
+    color: 'white',
+    fontWeight: 'bold',
+    fontSize: 14,
+    textAlign: 'center',
+  },
+  previewContainer: {
+    marginBottom: 16,
+    position: 'relative',
+  },
+  previewImage: {
+    width: '100%',
+    height: 200,
+    borderRadius: 8,
+  },
+  removeImageButton: {
+    position: 'absolute',
+    top: 8,
+    right: 8,
+    backgroundColor: 'rgba(0,0,0,0.6)',
+    width: 30,
+    height: 30,
+    borderRadius: 15,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  removeImageText: {
+    color: 'white',
+    fontWeight: 'bold',
+    fontSize: 16,
+  },
+  imageViewerContainer: {
+    flex: 1,
+    backgroundColor: 'rgba(0,0,0,0.9)',
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  imageViewerCloseButton: {
+    position: 'absolute',
+    top: 40,
+    right: 20,
+    backgroundColor: 'rgba(255,255,255,0.3)',
+    width: 40,
+    height: 40,
+    borderRadius: 20,
+    alignItems: 'center',
+    justifyContent: 'center',
+    zIndex: 10,
+  },
+  imageViewerCloseText: {
+    color: 'white',
+    fontWeight: 'bold',
+    fontSize: 18,
+  },
+  imageViewerContent: {
+    width: Dimensions.get('window').width,
+    height: Dimensions.get('window').height * 0.7,
+    position: 'relative',
+  },
+  imageViewerImage: {
+    width: Dimensions.get('window').width,
+    height: Dimensions.get('window').height * 0.7,
+  },
+  fullscreenImageLoader: {
+    position: 'absolute',
+    top: 0,
+    left: 0,
+    right: 0,
+    bottom: 0,
+    backgroundColor: 'rgba(0,0,0,0.3)',
   },
 });

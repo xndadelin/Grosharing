@@ -8,6 +8,7 @@ import {
   ImageViewerModal,
   NeighborsSection,
 } from "@/components/House";
+import { ChatModal } from "@/components/ChatModal";
 import { commonStyles } from "@/components/House/styles";
 import { pickImage, takePicture, uploadImageToSupabase } from "@/lib/imageService";
 import { registerForPushNotifications, sendAutomaticNotification } from "@/lib/notificationService";
@@ -15,7 +16,8 @@ import { addGroceryItem, getGroceryItems, getHouseBudget, getSpendingPerUser, ge
 import { supabase } from "@/lib/supabase";
 import { useLocalSearchParams, useRouter } from "expo-router";
 import React, { useEffect, useRef, useState } from "react";
-import { Alert, FlatList, Keyboard, StyleSheet, TextInput, View } from "react-native";
+import { Alert, FlatList, Keyboard, StyleSheet, TextInput, TouchableOpacity, View } from "react-native";
+import { Feather } from '@expo/vector-icons';
 
 const styles = StyleSheet.create({
   backButtonContainer: {
@@ -65,6 +67,8 @@ export default function HouseScreen() {
   const [userSpending, setUserSpending] = useState<Array<{user_name: string; total_spent: number}>>([]);
   const [showBudgetModal, setShowBudgetModal] = useState(false);
   const [newBudget, setNewBudget] = useState("");
+  const [showChat, setShowChat] = useState(false);
+  const [houseId, setHouseId] = useState<number | null>(null);
   const itemNameInputRef = useRef<TextInput>(null);
   const quantityInputRef = useRef<TextInput>(null);
   const descriptionInputRef = useRef<TextInput>(null);
@@ -131,8 +135,18 @@ export default function HouseScreen() {
       }
     };
 
+    const fetchHouseId = async () => {
+      const { data, error } = await supabase
+        .from('houses')
+        .select('id')
+        .eq('name', houseName)
+        .single();
+      if (!error && data) setHouseId(data.id);
+    };
+
     fetchData();
-  }, []);
+    if (houseName) fetchHouseId();
+  }, [houseName]);
 
   const filteredUsers = users.filter(
     (u) => u.house === houseName
@@ -489,7 +503,28 @@ export default function HouseScreen() {
         renderItem={({ item }) => item.component}
         showsVerticalScrollIndicator={true}
       />
-      
+      {/* Buton plutitor pentru chat */}
+      {houseId && (
+        <View style={{ position: 'absolute', bottom: 90, right: 24, zIndex: 20 }}>
+          <TouchableOpacity
+            onPress={() => setShowChat(true)}
+            style={{
+              width: 56,
+              height: 56,
+              borderRadius: 28,
+              backgroundColor: '#4A154B',
+              alignItems: 'center',
+              justifyContent: 'center',
+              elevation: 6,
+            }}
+          >
+            <Feather name="message-circle" size={28} color="#fff" />
+          </TouchableOpacity>
+        </View>
+      )}
+      {houseId && (
+        <ChatModal visible={showChat} onClose={() => setShowChat(false)} houseId={houseId} />
+      )}
       <View style={styles.backButtonContainer}>
         <BackButton onPress={() => router.replace("/home")} />
       </View>

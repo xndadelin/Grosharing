@@ -39,15 +39,14 @@ export const Avatar = ({ avatar_url }: AvatarProps) => {
 
     return (
         <View style={styles.container}>
-            <TouchableOpacity onPress={handleAvatarPress} style={styles.avatarContainer}>
-                <Image
-                    source={{
-                        uri: avatar_url
-                    }}
-                    style={styles.avatar}
-                />
-            </TouchableOpacity>
-
+            <View style={{ flexDirection: 'row', alignItems: 'center' }}>
+                <TouchableOpacity onPress={handleAvatarPress} style={styles.avatarContainer}>
+                    <Image
+                        source={{ uri: avatar_url }}
+                        style={styles.avatar}
+                    />
+                </TouchableOpacity>
+            </View>
             {menuVisible && (
                 <View style={styles.menu}>
                     <TouchableOpacity onPress={handleLogout} style={styles.menuItem}>

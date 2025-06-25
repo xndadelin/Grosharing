@@ -10,17 +10,6 @@ interface BudgetSectionProps {
 }
 
 export const BudgetSection = ({ houseBudget, totalSpent, onEditPress, groceryItems }: BudgetSectionProps) => {
-  const safeGroceryItems = Array.isArray(groceryItems) ? groceryItems : [];
-  const spendingPerUser = safeGroceryItems
-    .filter(item => item.completed && item.completed_by && item.price > 0)
-    .reduce((acc: Record<string, number>, item: any) => {
-      acc[item.completed_by] = (acc[item.completed_by] || 0) + item.price;
-      return acc;
-    }, {});
-  const spendingArray = Object.entries(spendingPerUser)
-    .map(([user, total]) => ({ user, total }))
-    .sort((a, b) => b.total - a.total);
-
   return (
     <View style={[commonStyles.section, styles.budgetSection]}>
       <View style={styles.budgetHeader}>
@@ -50,37 +39,13 @@ export const BudgetSection = ({ houseBudget, totalSpent, onEditPress, groceryIte
             </Text>
           </View>
         </View>
+        <View style={styles.percentContainerBudget}>
+          <Text style={styles.percentTextBudget}>
+            {houseBudget > 0 ? `${Math.min(100, Math.round((totalSpent / houseBudget) * 100))}% of budget used` : '—'}
+          </Text>
+        </View>
       </View>
-
-      <View style={styles.progressBarContainer}>
-        <View 
-          style={[
-            styles.progressBar, 
-            {width: `${Math.min(100, (totalSpent / Math.max(houseBudget, 0.01)) * 100)}%`},
-            totalSpent > houseBudget ? styles.overBudget : null
-          ]} 
-        />
-        <Text style={styles.progressText}>
-          {houseBudget <= 0 ? '0' : `${Math.min(999, Math.round((totalSpent / houseBudget) * 100))}`}%
-        </Text>
       </View>
-
-      <View style={{ marginTop: 24 }}>
-        <Text style={{ fontWeight: 'bold', fontSize: 16, marginBottom: 8 }}>
-          Who paid
-        </Text>
-        {spendingArray.length === 0 ? (
-          <Text>No one has completed any purchases yet.</Text>
-        ) : (
-          spendingArray.map(({ user, total }) => (
-            <View key={user} style={{ flexDirection: 'row', justifyContent: 'space-between', marginBottom: 4 }}>
-              <Text>{user}</Text>
-              <Text>${total.toFixed(2)}</Text>
-            </View>
-          ))
-        )}
-      </View>
-    </View>
   );
 };
 
@@ -148,5 +113,15 @@ const styles = StyleSheet.create({
     textShadowColor: 'rgba(255, 255, 255, 0.8)',
     textShadowOffset: { width: 1, height: 1 },
     textShadowRadius: 2,
+  },
+  percentContainerBudget: {
+    alignItems: 'center',
+    marginTop: 4,
+    marginBottom: 4,
+  },
+  percentTextBudget: {
+    fontSize: 16,
+    fontWeight: '600',
+    color: COLORS.PRIMARY,
   },
 });

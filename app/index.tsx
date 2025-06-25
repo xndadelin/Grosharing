@@ -57,8 +57,6 @@ export default function Index() {
 
           const accessToken = params.get("access_token")
           const refreshToken = params.get("refresh_token")
-          const expiresAt = params.get("expires_at")
-          const tokenType = params.get("token_type")
 
           if (accessToken && refreshToken) {
             const { data: sessionData, error: sessionError } = await supabase.auth.setSession({

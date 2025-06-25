@@ -7,7 +7,6 @@ import {
   HeaderSection,
   ImageViewerModal,
   NeighborsSection,
-  SpendingSummarySection
 } from "@/components/House";
 import { commonStyles } from "@/components/House/styles";
 import { pickImage, takePicture, uploadImageToSupabase } from "@/lib/imageService";
@@ -457,20 +456,13 @@ export default function HouseScreen() {
       )
     },
     {
-      id: 'spending',
-      component: (
-        <SpendingSummarySection
-          userSpending={userSpending}
-          totalSpent={totalSpent}
-        />
-      )
-    },
-    {
       id: 'neighbors',
       component: (
         <NeighborsSection 
           filteredUsers={filteredUsers} 
-          houseName={houseName} 
+          houseName={houseName}
+          userSpending={userSpending}
+          groceryItems={groceryItems}
         />
       )
     },

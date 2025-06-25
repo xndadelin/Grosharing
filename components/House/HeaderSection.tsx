@@ -10,7 +10,7 @@ export const HeaderSection = ({ houseName }: HeaderSectionProps) => {
   return (
     <View style={styles.headerSection}>
       <Text style={styles.houseName}>{houseName}</Text>
-      <Text style={styles.houseSubtitle}>Grocery Management</Text>
+      <Text style={styles.houseSubtitle}>Grocery management</Text>
       <View style={styles.divider} />
     </View>
   );

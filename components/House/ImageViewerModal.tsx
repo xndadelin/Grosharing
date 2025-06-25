@@ -1,4 +1,4 @@
-import React from "react";
+import React, { useState } from "react";
 import { ActivityIndicator, Image, Modal, StyleSheet, Text, TouchableOpacity, TouchableWithoutFeedback, View } from "react-native";
 import { COLORS } from "./styles";
 
@@ -11,10 +11,11 @@ interface ImageViewerModalProps {
 
 export const ImageViewerModal = ({
   visible,
-  imageLoading,
+  imageLoading: initialLoading,
   selectedImage,
   onClose
 }: ImageViewerModalProps) => {
+  const [isImageLoading, setIsImageLoading] = useState(initialLoading);
   return (
     <Modal
       visible={visible}
@@ -28,8 +29,9 @@ export const ImageViewerModal = ({
             <TouchableOpacity 
               style={styles.imageViewerCloseButton}
               onPress={onClose}
+              activeOpacity={0.7}
             >
-              <Text style={styles.imageViewerCloseText}>✕</Text>
+              <Text style={styles.imageViewerCloseText}>×</Text>
             </TouchableOpacity>
           </View>
           
@@ -40,10 +42,10 @@ export const ImageViewerModal = ({
                   source={{ uri: selectedImage }} 
                   style={styles.imageViewerImage}
                   resizeMode="contain"
-                  onLoadStart={() => {}}
-                  onLoadEnd={() => {}}
+                  onLoadStart={() => setIsImageLoading(true)}
+                  onLoadEnd={() => setIsImageLoading(false)}
                 />
-                {imageLoading && (
+                {isImageLoading && (
                   <View style={styles.fullscreenLoaderContainer}>
                     <ActivityIndicator 
                       style={styles.fullscreenImageLoader} 
@@ -74,20 +76,28 @@ const styles = StyleSheet.create({
     width: '100%',
     flexDirection: 'row',
     justifyContent: 'flex-end',
-    marginBottom: 12,
+    marginBottom: 16,
+    paddingHorizontal: 10,
   },
   imageViewerCloseButton: {
-    backgroundColor: 'rgba(255,255,255,0.8)',
-    padding: 10,
+    backgroundColor: 'rgba(255,255,255,0.85)',
+    width: 40,
+    height: 40,
     borderRadius: 20,
     alignItems: 'center',
     justifyContent: 'center',
     marginLeft: 'auto',
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.3,
+    shadowRadius: 3,
+    elevation: 5,
   },
   imageViewerCloseText: {
     color: COLORS.PRIMARY,
-    fontSize: 18,
-    fontWeight: 'bold',
+    fontSize: 20,
+    fontWeight: '600',
+    lineHeight: 24,
   },
   imageViewerContent: {
     width: '100%',

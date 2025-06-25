@@ -78,7 +78,6 @@ const styles = StyleSheet.create({
   groceryList: {
     flex: 1,
     minHeight: 50,
-    // Removed maxHeight constraint to allow full display of all items
   },
   neighborEmpty: {
     fontSize: 18,

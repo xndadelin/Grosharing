@@ -157,18 +157,17 @@ export const AddGroceryItemModal = ({
                 </View>
               ) : null}
 
-              <View style={styles.modalButtons}>
+              <View style={{ flexDirection: 'row', justifyContent: 'space-between', marginTop: 16 }}>
                 <TouchableOpacity
-                  style={[commonStyles.button, {backgroundColor: COLORS.GREY_LIGHT, marginRight: 10, flex: 1}]}
+                  style={[commonStyles.button, { backgroundColor: COLORS.GREY_LIGHT, flex: 1, marginRight: 10 }]}
                   onPress={onDismiss}
                 >
-                  <Text style={{...commonStyles.buttonText, color: COLORS.TEXT_DARK}}>Cancel</Text>
+                  <Text style={[commonStyles.buttonText, { color: COLORS.TEXT_DARK }]}>Cancel</Text>
                 </TouchableOpacity>
-
                 <TouchableOpacity
                   style={[
-                    commonStyles.button, 
-                    {marginLeft: 10, flex: 1},
+                    commonStyles.button,
+                    { flex: 1, marginLeft: 10 },
                     !newItem.itemName.trim() && styles.disabledButton
                   ]}
                   onPress={onSubmit}
@@ -292,43 +291,8 @@ const styles = StyleSheet.create({
     fontWeight: 'bold',
     fontSize: 16,
   },
-  modalButtons: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    marginTop: 16,
-  },
-  cancelButton: {
-    paddingVertical: 14,
-    paddingHorizontal: 15,
-    borderRadius: 10,
-    backgroundColor: '#f2f2f2',
-    flex: 1,
-    marginRight: 10,
-    alignItems: 'center',
-  },
-  confirmButton: {
-    paddingVertical: 14,
-    paddingHorizontal: 15,
-    borderRadius: 10,
-    backgroundColor: '#4A154B',
-    flex: 1,
-    marginLeft: 10,
-    alignItems: 'center',
-  },
   disabledButton: {
     backgroundColor: COLORS.GREY_DARK,
     opacity: 0.7,
-  },
-  cancelButtonText: {
-    textAlign: 'center',
-    color: '#333',
-    fontWeight: 'bold',
-    fontSize: 16,
-  },
-  confirmButtonText: {
-    textAlign: 'center',
-    color: '#FFF',
-    fontWeight: 'bold',
-    fontSize: 16,
   },
 });

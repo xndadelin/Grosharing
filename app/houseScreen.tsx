@@ -1,17 +1,18 @@
 import {
-    AddGroceryItemModal,
-    BackButton,
-    BudgetModal,
-    BudgetSection,
-    GroceryListSection,
-    HeaderSection,
-    ImageViewerModal,
-    NeighborsSection
+  AddGroceryItemModal,
+  BackButton,
+  BudgetModal,
+  BudgetSection,
+  GroceryListSection,
+  HeaderSection,
+  ImageViewerModal,
+  NeighborsSection,
+  SpendingSummarySection
 } from "@/components/House";
 import { commonStyles } from "@/components/House/styles";
 import { pickImage, takePicture, uploadImageToSupabase } from "@/lib/imageService";
 import { registerForPushNotifications, sendAutomaticNotification } from "@/lib/notificationService";
-import { addGroceryItem, getGroceryItems, getHouseBudget, getTotalSpent, getUser, updateGroceryItemStatus, setHouseBudget as updateHouseBudgetInDB } from "@/lib/queries";
+import { addGroceryItem, getGroceryItems, getHouseBudget, getSpendingPerUser, getTotalSpent, getUser, updateGroceryItemStatus, setHouseBudget as updateHouseBudgetInDB } from "@/lib/queries";
 import { supabase } from "@/lib/supabase";
 import { useLocalSearchParams, useRouter } from "expo-router";
 import React, { useEffect, useRef, useState } from "react";
@@ -62,6 +63,7 @@ export default function HouseScreen() {
   const [imageLoading, setImageLoading] = useState(false);
   const [houseBudget, setHouseBudget] = useState<number>(150);
   const [totalSpent, setTotalSpent] = useState<number>(0);
+  const [userSpending, setUserSpending] = useState<Array<{user_name: string; total_spent: number}>>([]);
   const [showBudgetModal, setShowBudgetModal] = useState(false);
   const [newBudget, setNewBudget] = useState("");
   const itemNameInputRef = useRef<TextInput>(null);
@@ -73,12 +75,13 @@ export default function HouseScreen() {
     const fetchData = async () => {
       setLoading(true);
       try {
-        const [usersData, itemsData, userData, budget, spent] = await Promise.all([
+        const [usersData, itemsData, userData, budget, spent, userSpendingData] = await Promise.all([
           getUsers(),
           getGroceryItems(houseName),
           getUser(),
           getHouseBudget(houseName),
-          getTotalSpent(houseName)
+          getTotalSpent(houseName),
+          getSpendingPerUser(houseName)
         ]);
 
         setUsers(usersData);
@@ -90,6 +93,7 @@ export default function HouseScreen() {
         setCurrentUser(userData);
         setHouseBudget(budget || 150);
         setTotalSpent(spent || 0);
+        setUserSpending(userSpendingData);
 
 
         try {
@@ -301,6 +305,9 @@ export default function HouseScreen() {
 
       await updateGroceryItemStatus(itemId, !currentStatus, userName);
 
+      const itemToUpdate = groceryItems.find(item => item.id === itemId);
+      const itemPrice = itemToUpdate?.price || 0;
+      
       setGroceryItems((prev) =>
         prev.map((item) =>
           item.id === itemId ? {
@@ -310,6 +317,38 @@ export default function HouseScreen() {
           } : item
         )
       );
+      
+      if (!currentStatus) {
+        setTotalSpent(prev => prev + itemPrice);
+        setUserSpending(prev => {
+          const existingUserIndex = prev.findIndex(u => u.user_name === userName);
+          if (existingUserIndex >= 0) {
+            const updatedSpending = [...prev];
+            updatedSpending[existingUserIndex].total_spent += itemPrice;
+            return updatedSpending.sort((a, b) => b.total_spent - a.total_spent);
+          } else {
+            return [...prev, { user_name: userName, total_spent: itemPrice }]
+              .sort((a, b) => b.total_spent - a.total_spent);
+          }
+        });
+      } else {
+        setTotalSpent(prev => Math.max(0, prev - itemPrice));
+        setUserSpending(prev => {
+          const existingUserIndex = prev.findIndex(u => u.user_name === userName);
+          if (existingUserIndex >= 0) {
+            const updatedSpending = [...prev];
+            updatedSpending[existingUserIndex].total_spent = Math.max(
+              0, 
+              updatedSpending[existingUserIndex].total_spent - itemPrice
+            );
+            if (updatedSpending[existingUserIndex].total_spent === 0) {
+              updatedSpending.splice(existingUserIndex, 1);
+            }
+            return updatedSpending.sort((a, b) => b.total_spent - a.total_spent);
+          }
+          return prev;
+        });
+      }
 
       if (!currentStatus) {
         try {
@@ -336,7 +375,7 @@ export default function HouseScreen() {
                   user.push_token,
                   'groceryItemCompleted',
                   {
-                    title: 'Item Completed',
+                    title: 'Item completed',
                     body: notificationBody,
                     data: {
                       itemName: itemName,
@@ -413,6 +452,16 @@ export default function HouseScreen() {
             setNewBudget(houseBudget.toString());
             setShowBudgetModal(true);
           }}
+          groceryItems={groceryItems}
+        />
+      )
+    },
+    {
+      id: 'spending',
+      component: (
+        <SpendingSummarySection
+          userSpending={userSpending}
+          totalSpent={totalSpent}
         />
       )
     },

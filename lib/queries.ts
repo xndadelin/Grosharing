@@ -164,3 +164,34 @@ export const getHouseMembersCount = async(): Promise<Record<string, number>> => 
     }
 };
 
+export const getSpendingPerUser = async (houseName: string): Promise<Array<{user_name: string; total_spent: number}>> => {
+    const { data, error } = await supabase
+        .from('grocery_items')
+        .select('completed_by, price')
+        .eq('house', houseName)
+        .eq('completed', true)
+        .not('completed_by', 'is', null)
+        .gt('price', 0);
+    
+    if (error) {
+        console.error('Error fetching spending per user:', error);
+        return [];
+    }
+
+    // Group and calculate spending per user
+    const spendingMap: Record<string, number> = {};
+    for (const item of data || []) {
+        if (item.completed_by && item.price) {
+            spendingMap[item.completed_by] = (spendingMap[item.completed_by] || 0) + item.price;
+        }
+    }
+
+    // Convert to array and sort by total spent (descending)
+    const result = Object.entries(spendingMap).map(([user_name, total_spent]) => ({
+        user_name,
+        total_spent
+    }));
+    
+    return result.sort((a, b) => b.total_spent - a.total_spent);
+};
+

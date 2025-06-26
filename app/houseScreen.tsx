@@ -16,7 +16,7 @@ import { addGroceryItem, getGroceryItems, getHouseBudget, getSpendingPerUser, ge
 import { supabase } from "@/lib/supabase";
 import { useLocalSearchParams, useRouter } from "expo-router";
 import React, { useEffect, useRef, useState } from "react";
-import { Alert, FlatList, Keyboard, StyleSheet, TextInput, TouchableOpacity, View } from "react-native";
+import { Alert, FlatList, Keyboard, StyleSheet, TextInput, TouchableOpacity, View, Text } from "react-native";
 import { Feather } from '@expo/vector-icons';
 
 const styles = StyleSheet.create({
@@ -69,6 +69,7 @@ export default function HouseScreen() {
   const [newBudget, setNewBudget] = useState("");
   const [showChat, setShowChat] = useState(false);
   const [houseId, setHouseId] = useState<number | null>(null);
+
   const itemNameInputRef = useRef<TextInput>(null);
   const quantityInputRef = useRef<TextInput>(null);
   const descriptionInputRef = useRef<TextInput>(null);

@@ -195,3 +195,26 @@ export const getSpendingPerUser = async (houseName: string): Promise<Array<{user
     return result.sort((a, b) => b.total_spent - a.total_spent);
 };
 
+export const getChores = async (house: string) => {
+    const { data, error } = await supabase
+        .from('chores')
+        .select('*')
+        .eq('house', house)
+        .order('created_at', { ascending: false });
+    return data || [];
+};
+
+export const addChore = async (chore: {
+    house: string,
+    task_name: string,
+    description?: string,
+    assigned_to?: string,
+    added_by?: string,
+    due_date?: string
+}) => {
+    const { data, error } = await supabase
+        .from('chores')
+        .insert([chore]);
+    return data;
+};
+
